@@ -21,9 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -55,13 +52,13 @@ fun IdleScreen(
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Above 130 % text the drop zone cannot share the screen, so the page scrolls instead.
-    val roomy = LocalDensity.current.fontScale <= 1.3f
-    Column(
-        modifier.fillMaxSize().background(PhotonColors.Background)
-            .then(if (roomy) Modifier else Modifier.verticalScroll(rememberScrollState()))
+    // The drop zone fills what is left; on short phones or with large text the page scrolls,
+    // so Select photos is never cut off.
+    FillOrScroll(
+        fillIndex = 1,
+        spacing = 18.dp,
+        modifier = modifier.fillMaxSize().background(PhotonColors.Background)
             .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
             Logo()
@@ -70,7 +67,7 @@ fun IdleScreen(
             RoundIconButton(PhotonIcons.Settings, stringResource(R.string.settings), onSettings)
         }
 
-        DropZone(onSelectPhotos, if (roomy) Modifier.weight(1f) else Modifier)
+        DropZone(onSelectPhotos)
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.size_label), style = PhotonType.CaptionStrong, color = PhotonColors.Muted)
