@@ -17,6 +17,8 @@ allow = [
     "MPL-2.0",
 ]
 confidence-threshold = 0.9
+# Licenses we pre-approve for later dependencies (jpegli is BSD-3-Clause).
+unused-allowed-license = "allow"
 # Our own crate is not published, so it needs no license entry.
 private = { ignore = true }
 
