@@ -96,7 +96,7 @@ class ScreenshotTest {
 
     @Test
     fun settings() = shot("5-settings") {
-        SettingsScreen("Larkmail", {}, {}, androidx.compose.ui.Modifier.background(PhotonColors.Background), version = "1.0.0")
+        SettingsScreen("Larkmail", {}, {}, androidx.compose.ui.Modifier.background(PhotonColors.Background), version = "1.0.0", onDonate = {})
     }
 
     @Test
