@@ -28,7 +28,7 @@ email-safe JPEGs, and hands them straight back to share.
 | `scripts/check-permissions.sh` | Fails if an APK asks for any permission (see `PRIVACY.md`) |
 | `scripts/gen-licenses.py` | Collects the licence texts shown under Settings > Open source licenses |
 | `third_party/licenses/` | Standard licence texts for libraries that ship none |
-| `store/` | Icon and artwork sources (`icon.py`, `orb.py`), Play Store icon and feature graphic (`render.js`) |
+| `store/` | Icon and artwork sources (`icon.py`, `orb.py`), Play Store icon and feature graphic (`render.js`), listing text and Play Console answers (`listing.md`) |
 | `PRIVACY.md` | Privacy policy, linked from Settings and the Play listing |
 
 ## Build
@@ -112,6 +112,8 @@ keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 4
 
 Google Play App Signing holds the real app signing key, so a lost upload key can be reset.
 Without the secrets, `./gradlew bundleRelease` still builds an unsigned bundle locally.
+The release workflow sets `PHOTON_PLAY_BUILD=true`, which leaves the Donate row out of the
+Play build (Google Play does not allow links to outside payment pages).
 
 Settings > Open source licenses lists every bundled library. Gradle generates the list on
 each build (`scripts/gen-licenses.py`), from `Cargo.lock`, the jpegli sources and

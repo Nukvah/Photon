@@ -69,7 +69,7 @@ import kotlinx.coroutines.withContext
  * Hosts the three Photon screens. Photos arrive from the share sheet (straight to
  * Processing) or the photo picker; results leave through FileProvider share intents
  * or a folder the person picks. The gear opens Settings (email app, privacy policy,
- * open source licenses, donate; developer tools in debug builds only).
+ * open source licenses, donate outside Google Play builds; developer tools in debug builds only).
  */
 class MainActivity : ComponentActivity() {
 
@@ -136,7 +136,7 @@ class MainActivity : ComponentActivity() {
                         onPrivacyPolicy = { openPrivacyPolicy() },
                         onLicenses = { showLicenses = true },
                         version = remember { appVersion() },
-                        onDonate = if (getString(R.string.donate_url).isNotBlank()) ({ openDonatePage() }) else null,
+                        onDonate = if (BuildConfig.SHOW_DONATE && getString(R.string.donate_url).isNotBlank()) ({ openDonatePage() }) else null,
                     ) {
                         // Benchmark and timing tools are for development; release builds leave them out.
                         if (BuildConfig.DEBUG) DeveloperSection(state.lastFinishedBatch())

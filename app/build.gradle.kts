@@ -19,6 +19,10 @@ android {
         // The release workflow sets these from the run number and the git tag.
         versionCode = System.getenv("PHOTON_VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = System.getenv("PHOTON_VERSION_NAME") ?: "0.1.0"
+        // Google Play does not allow links to outside payment pages, so the Play build
+        // (PHOTON_PLAY_BUILD=true, set by the release workflow) has no Donate row.
+        val playBuild = System.getenv("PHOTON_PLAY_BUILD") == "true"
+        buildConfigField("boolean", "SHOW_DONATE", (!playBuild).toString())
     }
 
     // The upload key for Google Play. CI writes the keystore from repository secrets;
