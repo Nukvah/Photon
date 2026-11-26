@@ -1,6 +1,6 @@
 package com.nukvah.photon.ui
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +30,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -101,10 +102,8 @@ fun IdleScreen(
 
 @Composable
 private fun Logo() {
-    Canvas(Modifier.size(28.dp)) {
-        drawCircle(PhotonColors.Accent, radius = size.minDimension * 13f / 28f)
-        drawCircle(Color.White, radius = size.minDimension * 5f / 28f)
-    }
+    // The launcher mark (store/icon.py): a light wave that ends in a photon.
+    Image(painterResource(R.drawable.ic_logo), contentDescription = null, modifier = Modifier.size(width = 42.dp, height = 15.dp))
 }
 
 @Composable
