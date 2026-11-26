@@ -1,0 +1,4 @@
+<resources>
+    <!-- Photon accent, the launcher icon's background. -->
+    <color name="ic_launcher_background">#2E46E6</color>
+</resources>

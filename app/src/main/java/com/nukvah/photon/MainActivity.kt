@@ -1,6 +1,7 @@
 package com.nukvah.photon
 
 import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -50,7 +51,9 @@ import com.nukvah.photon.system.saveToTree
 import com.nukvah.photon.system.sharedImageUris
 import com.nukvah.photon.ui.AppChoice
 import com.nukvah.photon.ui.EmailAppSheet
+import com.nukvah.photon.ui.LicensesScreen
 import com.nukvah.photon.ui.LocalThumbnails
+import com.nukvah.photon.ui.Notice
 import com.nukvah.photon.ui.PhotonActions
 import com.nukvah.photon.ui.PhotonApp
 import com.nukvah.photon.ui.PhotonColors
@@ -65,7 +68,8 @@ import kotlinx.coroutines.withContext
 /**
  * Hosts the three Photon screens. Photos arrive from the share sheet (straight to
  * Processing) or the photo picker; results leave through FileProvider share intents
- * or a folder the person picks. The gear opens Settings (email app, developer tools).
+ * or a folder the person picks. The gear opens Settings (email app, privacy policy,
+ * open source licenses, developer tools).
  */
 class MainActivity : ComponentActivity() {
 
@@ -111,15 +115,27 @@ class MainActivity : ComponentActivity() {
             PhotonTheme {
                 val state by vm.state.collectAsStateWithLifecycle()
                 var showSettings by rememberSaveable { mutableStateOf(false) }
+                var showLicenses by rememberSaveable { mutableStateOf(false) }
                 val screen = Modifier.fillMaxSize().background(PhotonColors.Background).safeDrawingPadding()
 
-                if (showSettings) {
+                if (showSettings && showLicenses) {
+                    BackHandler { showLicenses = false }
+                    LicensesScreen(
+                        notices = remember { loadNotices() },
+                        loadText = { file -> assets.open("licenses/$file").use { it.reader().readText() } },
+                        onBack = { showLicenses = false },
+                        modifier = screen,
+                    )
+                } else if (showSettings) {
                     BackHandler { showSettings = false }
                     SettingsScreen(
                         emailApp = emailAppLabel,
                         onChangeEmailApp = { emailPicker = emailApps.installed() to null },
                         onBack = { showSettings = false },
                         modifier = screen,
+                        onPrivacyPolicy = { openPrivacyPolicy() },
+                        onLicenses = { showLicenses = true },
+                        version = remember { appVersion() },
                     ) { DeveloperSection(state.lastFinishedBatch()) }
                 } else {
                     val actions = remember { Actions { showSettings = true } }
@@ -173,6 +189,20 @@ class MainActivity : ComponentActivity() {
             // Uninstalled or disabled since it was picked: ask again next time.
             emailApps.chosen = null
             sharing.otherApps(batch.results)
+        }
+    }
+
+    private fun loadNotices(): List<Notice> =
+        runCatching { assets.open("licenses/index.tsv").use { Notice.parse(it.reader().readText()) } }.getOrDefault(emptyList())
+
+    private fun appVersion(): String =
+        runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull().orEmpty()
+
+    private fun openPrivacyPolicy() {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.privacy_policy_url))))
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(this, getString(R.string.privacy_policy_url), Toast.LENGTH_LONG).show()
         }
     }
 

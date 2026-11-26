@@ -96,7 +96,17 @@ class ScreenshotTest {
 
     @Test
     fun settings() = shot("5-settings") {
-        SettingsScreen("Larkmail", {}, {}, androidx.compose.ui.Modifier.background(PhotonColors.Background))
+        SettingsScreen("Larkmail", {}, {}, androidx.compose.ui.Modifier.background(PhotonColors.Background), version = "1.0.0")
+    }
+
+    @Test
+    fun licenses() = shot("5-licenses") {
+        val notices = listOf(
+            Notice("jpegli", "", "BSD-3-Clause", "a.txt"),
+            Notice("moonforge-codec", "2.1.0", "MIT OR Apache-2.0", "b.txt"),
+            Notice("starfall", "0.9.3", "MPL-2.0", "c.txt"),
+        )
+        LicensesScreen(notices, { "" }, {}, androidx.compose.ui.Modifier.background(PhotonColors.Background))
     }
 
     private fun shot(name: String, content: @Composable () -> Unit) {

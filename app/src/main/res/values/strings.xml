@@ -84,6 +84,14 @@
     <string name="email_app_not_chosen">Asks the first time you share via email</string>
     <string name="change">Change</string>
 
+    <!-- Settings -->
+    <string name="privacy_policy">Privacy policy</string>
+    <string name="privacy_summary">Photos never leave your phone. Photon collects nothing.</string>
+    <string name="licenses">Open source licenses</string>
+    <string name="licenses_intro">Photon is built with these libraries. Tap one to read its license.</string>
+    <string name="version">Version %s</string>
+    <string name="privacy_policy_url" translatable="false">https://github.com/Nukvah/Photon/blob/main/PRIVACY.md</string>
+
     <!-- Developer screen -->
     <string name="developer">Developer</string>
     <string name="last_batch_timing">Last batch: %1$d photos in %2$.1f s (%3$.2f s each)</string>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher icon: a photo with the sun and hills cut out, inside corner marks for "made smaller". -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="1.12"
+        android:scaleY="1.12">
+        <path
+            android:fillColor="#FFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M43,40H65A5,5 0,0 1,70 45V63A5,5 0,0 1,65 68H43A5,5 0,0 1,38 63V45A5,5 0,0 1,43 40Z M43,49A3,3 0,1 0,49 49A3,3 0,1 0,43 49Z M41,65L53,53L60,60L64,56L67,59V65Z" />
+        <path
+            android:pathData="M33,38V33H38M75,38V33H70M33,70V75H38M75,70V75H70"
+            android:strokeAlpha="1"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:strokeWidth="3" />
+    </group>
+</vector>

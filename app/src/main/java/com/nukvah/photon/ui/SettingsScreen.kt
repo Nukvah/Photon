@@ -22,13 +22,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.nukvah.photon.R
 
-/** Settings: the email app, then developer tools passed in as `developer`. */
+/** Settings: the email app, the privacy policy and licences, then developer tools passed in as `developer`. */
 @Composable
 fun SettingsScreen(
     emailApp: String?,
     onChangeEmailApp: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onPrivacyPolicy: () -> Unit = {},
+    onLicenses: () -> Unit = {},
+    version: String = "",
     developer: @Composable () -> Unit = {},
 ) {
     Column(
@@ -38,19 +41,29 @@ fun SettingsScreen(
         RoundIconButton(PhotonIcons.Close, stringResource(R.string.back), onBack)
         Text(stringResource(R.string.settings), style = PhotonType.Heading, color = PhotonColors.Ink, modifier = Modifier.semantics { heading() })
 
-        Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(PhotonColors.Surface)
-                .clickable(role = Role.Button, onClick = onChangeEmailApp)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(stringResource(R.string.email_app_setting), style = PhotonType.BodyStrong, color = PhotonColors.Ink)
-                Text(emailApp ?: stringResource(R.string.email_app_not_chosen), style = PhotonType.Caption, color = PhotonColors.Muted)
-            }
-            Text(stringResource(R.string.change), style = PhotonType.ButtonSmall, color = PhotonColors.Accent)
+        SettingRow(stringResource(R.string.email_app_setting), emailApp ?: stringResource(R.string.email_app_not_chosen), stringResource(R.string.change), onChangeEmailApp)
+        SettingRow(stringResource(R.string.privacy_policy), stringResource(R.string.privacy_summary), null, onPrivacyPolicy)
+        SettingRow(stringResource(R.string.licenses), null, null, onLicenses)
+        if (version.isNotEmpty()) {
+            Text(stringResource(R.string.version, version), style = PhotonType.Caption, color = PhotonColors.Faint)
         }
 
         developer()
+    }
+}
+
+@Composable
+private fun SettingRow(title: String, detail: String?, action: String?, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(PhotonColors.Surface)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = PhotonType.BodyStrong, color = PhotonColors.Ink)
+            if (detail != null) Text(detail, style = PhotonType.Caption, color = PhotonColors.Muted)
+        }
+        if (action != null) Text(action, style = PhotonType.ButtonSmall, color = PhotonColors.Accent)
     }
 }

@@ -16,13 +16,29 @@ android {
         applicationId = "com.nukvah.photon"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // The release workflow sets these from the run number and the git tag.
+        versionCode = System.getenv("PHOTON_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("PHOTON_VERSION_NAME") ?: "0.1.0"
+    }
+
+    // The upload key for Google Play. CI writes the keystore from repository secrets;
+    // without them the release build is unsigned (fine for local checks).
+    val keystore = System.getenv("PHOTON_KEYSTORE")?.let(::file)?.takeIf { it.isFile }
+    signingConfigs {
+        if (keystore != null) {
+            create("upload") {
+                storeFile = keystore
+                storePassword = System.getenv("PHOTON_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("PHOTON_KEY_ALIAS")
+                keyPassword = System.getenv("PHOTON_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (keystore != null) signingConfig = signingConfigs.getByName("upload")
         }
     }
 
@@ -48,6 +64,7 @@ android {
     sourceSets["main"].apply {
         jniLibs.srcDir(layout.buildDirectory.dir("rust/jniLibs"))
         java.srcDir(layout.buildDirectory.dir("rust/kotlin"))
+        assets.srcDir(layout.buildDirectory.dir("generated/notices"))
     }
 }
 
@@ -80,7 +97,21 @@ val buildRust by tasks.registering(Exec::class) {
     }
 }
 
-tasks.named("preBuild") { dependsOn(buildRust) }
+// Writes the notices shown under Settings > Open source licenses (assets/licenses/).
+val generateNotices by tasks.registering(Exec::class) {
+    group = "build"
+    description = "Collects the licence texts of every library in the app."
+    val script = rootProject.file("scripts/gen-licenses.py")
+    val out = layout.buildDirectory.dir("generated/notices").get().asFile
+    inputs.file(script)
+    inputs.file(rootProject.file("core/Cargo.lock"))
+    inputs.file(rootProject.file("gradle/libs.versions.toml"))
+    inputs.dir(rootProject.file("third_party"))
+    outputs.dir(out)
+    commandLine("python3", script.absolutePath, out.absolutePath)
+}
+
+tasks.named("preBuild") { dependsOn(buildRust, generateNotices) }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
