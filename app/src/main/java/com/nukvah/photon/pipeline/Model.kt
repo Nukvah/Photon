@@ -24,6 +24,8 @@ data class PhotoResult(
     val width: Int,
     val height: Int,
     val sizeBytes: Long,
+    /** Absolute path of the JPEG in the app's cache; empty for sample data. */
+    val file: String = "",
 )
 
 /** What a running batch reports; `index` points into the input list. */

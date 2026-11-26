@@ -90,6 +90,8 @@ pub struct Processed {
 pub enum PipelineError {
     Decode(DecodeError),
     Encode(EncodeError),
+    /// The progress callback asked to stop.
+    Cancelled,
 }
 
 impl std::fmt::Display for PipelineError {
@@ -97,6 +99,7 @@ impl std::fmt::Display for PipelineError {
         match self {
             PipelineError::Decode(e) => write!(f, "cannot read photo: {e}"),
             PipelineError::Encode(e) => write!(f, "cannot write JPEG: {e}"),
+            PipelineError::Cancelled => f.write_str("cancelled"),
         }
     }
 }
@@ -115,12 +118,62 @@ impl From<EncodeError> for PipelineError {
     }
 }
 
+/// Progress reports go to a callback that returns `false` to stop the work.
+/// Fractions only rise; 1.0 is never reported (the caller knows when it is done).
+pub type Progress<'a> = &'a mut dyn FnMut(f32) -> bool;
+
+/// Most encodes the size search can need: the two end points plus the bisection.
+pub const MAX_ENCODES: u32 = 2 + SEARCH_STEPS;
+
 pub fn process(input: &[u8], preset: Preset) -> Result<Processed, PipelineError> {
-    let spec = preset.spec();
+    process_with_progress(input, preset, &mut |_| true)
+}
+
+pub fn process_with_progress(
+    input: &[u8],
+    preset: Preset,
+    progress: Progress,
+) -> Result<Processed, PipelineError> {
     let (image, decode_info) = decode::decode(input)?;
+    finish(image, decode_info, preset, progress)
+}
+
+/// Same pipeline for pixels another decoder produced (Android decodes AVIF and HEIC).
+/// `rgba` must already be upright sRGB, 4 bytes per pixel, not premultiplied.
+pub fn process_rgba_with_progress(
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    preset: Preset,
+    progress: Progress,
+) -> Result<Processed, PipelineError> {
+    let image = decode::from_rgba(rgba, width, height)?;
+    let info = DecodeInfo {
+        format: "pixels",
+        exif_orientation: 1,
+        icc_converted: false,
+    };
+    finish(image, info, preset, progress)
+}
+
+fn finish(
+    image: decode::RgbImage,
+    decode_info: DecodeInfo,
+    preset: Preset,
+    progress: Progress,
+) -> Result<Processed, PipelineError> {
+    // Rough shares of the time on a phone: decode 40 %, resize 15 %, encodes the rest.
+    if !progress(0.4) {
+        return Err(PipelineError::Cancelled);
+    }
+    let spec = preset.spec();
     let small = resize::downscale(&image, spec.target_pixels);
     drop(image);
-    let (jpeg, distance, encodes) = size_search(&small, &spec)?;
+    if !progress(0.55) {
+        return Err(PipelineError::Cancelled);
+    }
+    let mut on_encode = |done: u32| progress(0.55 + 0.45 * done as f32 / (MAX_ENCODES + 1) as f32);
+    let (jpeg, distance, encodes) = size_search(&small, &spec, &mut on_encode)?;
     Ok(Processed {
         jpeg,
         width: small.width,
@@ -138,13 +191,20 @@ pub fn process(input: &[u8], preset: Preset) -> Result<Processed, PipelineError>
 fn size_search(
     img: &decode::RgbImage,
     spec: &PresetSpec,
-) -> Result<(Vec<u8>, f32, u32), EncodeError> {
-    let encode_at = |distance: f32| {
+    on_encode: &mut dyn FnMut(u32) -> bool,
+) -> Result<(Vec<u8>, f32, u32), PipelineError> {
+    let mut count = 0;
+    let mut encode_at = |distance: f32| -> Result<Vec<u8>, PipelineError> {
         let options = EncodeOptions {
             distance,
             ..EncodeOptions::default()
         };
-        encode::encode_rgb(&img.pixels, img.width, img.height, &options)
+        let jpeg = encode::encode_rgb(&img.pixels, img.width, img.height, &options)?;
+        count += 1;
+        if !on_encode(count) {
+            return Err(PipelineError::Cancelled);
+        }
+        Ok(jpeg)
     };
 
     let best = encode_at(spec.min_distance)?;
@@ -266,10 +326,49 @@ mod tests {
         };
         // A cap halfway between the best and worst quality sizes forces a bisection.
         spec.max_bytes = (size_at(spec.min_distance) + size_at(spec.max_distance)) / 2;
-        let (jpeg, distance, encodes) = size_search(&img, &spec).unwrap();
+        let (jpeg, distance, encodes) = size_search(&img, &spec, &mut |_| true).unwrap();
         assert!(jpeg.len() <= spec.max_bytes);
         assert!(distance > spec.min_distance && distance < spec.max_distance);
         assert_eq!(encodes, 2 + SEARCH_STEPS);
+    }
+
+    #[test]
+    fn progress_rises_and_cancel_stops() {
+        let input = testimg::jpeg_with_segments(640, 480, None, None);
+        let mut seen = Vec::new();
+        let out = process_with_progress(&input, Preset::Small, &mut |f| {
+            seen.push(f);
+            true
+        })
+        .unwrap();
+        assert!(seen.windows(2).all(|w| w[0] < w[1]), "{seen:?}");
+        assert!(seen.iter().all(|f| *f > 0.0 && *f < 1.0), "{seen:?}");
+        assert_eq!(seen.len() as u32, 2 + out.encodes);
+
+        let mut calls = 0;
+        let stopped = process_with_progress(&input, Preset::Small, &mut |_| {
+            calls += 1;
+            calls < 2
+        });
+        assert_eq!(stopped, Err(PipelineError::Cancelled));
+        assert_eq!(calls, 2);
+    }
+
+    #[test]
+    fn pixels_from_another_decoder_match_the_file_path() {
+        let png = testimg::png_fading(300, 200);
+        let (image, _) = decode::decode(&png).unwrap();
+        let rgba = image::load_from_memory(&png).unwrap().into_rgba8();
+        let from_file = process(&png, Preset::Standard).unwrap();
+        let from_pixels =
+            process_rgba_with_progress(rgba.as_raw(), 300, 200, Preset::Standard, &mut |_| true)
+                .unwrap();
+        assert_eq!(from_file.jpeg, from_pixels.jpeg);
+        assert_eq!(
+            (image.width, image.height),
+            (from_pixels.width, from_pixels.height)
+        );
+        assert!(process_rgba_with_progress(&[0; 7], 2, 2, Preset::Small, &mut |_| true).is_err());
     }
 
     #[test]

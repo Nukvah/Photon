@@ -3,7 +3,6 @@ package com.nukvah.photon.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.nukvah.photon.pipeline.SamplePhotos
 
 /** Everything the screens can ask the outside world to do (pickers, share sheets). */
 interface PhotonActions {
@@ -47,5 +46,3 @@ fun PhotonApp(state: UiState, viewModel: PhotonViewModel, actions: PhotonActions
     }
 }
 
-/** Until the photo picker arrives (Stage 4), "Select photos" runs a sample batch. */
-fun PhotonViewModel.startSampleBatch() = start(SamplePhotos.batch)

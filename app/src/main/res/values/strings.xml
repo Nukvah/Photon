@@ -57,7 +57,18 @@
     <string name="share_email">Share via email</string>
     <string name="save_to_folder">Save to folder</string>
     <string name="other_apps">Other apps</string>
-    <string name="coming_soon">Sharing arrives in the next update</string>
+    <plurals name="saved_to_folder">
+        <item quantity="one">Saved %d photo</item>
+        <item quantity="other">Saved %d photos</item>
+    </plurals>
+    <string name="save_failed">Saved %1$d of %2$d photos. The folder may be full or read-only.</string>
+
+    <!-- Email app -->
+    <string name="email_app_title">Send with</string>
+    <string name="email_app_hint">Pick the app you write email in. Photon remembers it; you can change it in Settings.</string>
+    <string name="email_app_setting">Email app</string>
+    <string name="email_app_not_chosen">Asks the first time you share via email</string>
+    <string name="change">Change</string>
 
     <!-- Developer screen -->
     <string name="developer">Developer</string>

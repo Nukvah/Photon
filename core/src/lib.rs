@@ -20,6 +20,8 @@ pub enum PhotonError {
     Encode { reason: String },
     /// The file is not a photo we can read (unsupported format, corrupt, too large).
     Decode { reason: String },
+    /// The progress listener asked to stop.
+    Cancelled,
 }
 
 impl std::fmt::Display for PhotonError {
@@ -28,6 +30,7 @@ impl std::fmt::Display for PhotonError {
             PhotonError::Encode { reason } | PhotonError::Decode { reason } => {
                 write!(f, "{reason}")
             }
+            PhotonError::Cancelled => f.write_str("cancelled"),
         }
     }
 }
@@ -51,6 +54,7 @@ impl From<pipeline::PipelineError> for PhotonError {
             pipeline::PipelineError::Encode(d) => PhotonError::Encode {
                 reason: d.to_string(),
             },
+            pipeline::PipelineError::Cancelled => PhotonError::Cancelled,
         }
     }
 }
@@ -83,17 +87,52 @@ pub struct ProcessedPhoto {
     pub distance: f32,
 }
 
-/// Runs the full pipeline on one photo file's bytes.
+/// Hears how far one photo has got. Called on the worker thread.
+#[uniffi::export(callback_interface)]
+pub trait ProgressListener: Send + Sync {
+    /// `fraction` rises from 0 towards 1. Return false to stop; the call then fails with `Cancelled`.
+    fn on_progress(&self, fraction: f32) -> bool;
+}
+
+/// Runs the full pipeline on one photo file's bytes (JPEG, PNG or WebP).
 /// Call from a background thread; each call is independent, so photos can run in parallel.
 #[uniffi::export]
-pub fn process_photo(input: Vec<u8>, preset: SizePreset) -> Result<ProcessedPhoto, PhotonError> {
-    let out = pipeline::process(&input, preset.into())?;
-    Ok(ProcessedPhoto {
-        jpeg: out.jpeg,
-        width: out.width,
-        height: out.height,
-        distance: out.distance,
-    })
+pub fn process_photo(
+    input: Vec<u8>,
+    preset: SizePreset,
+    listener: Box<dyn ProgressListener>,
+) -> Result<ProcessedPhoto, PhotonError> {
+    let out =
+        pipeline::process_with_progress(&input, preset.into(), &mut |f| listener.on_progress(f))?;
+    Ok(out.into())
+}
+
+/// Runs the pipeline on pixels Android already decoded (AVIF, HEIC and anything else
+/// the core cannot read): upright sRGB, RGBA, not premultiplied, rows top to bottom.
+#[uniffi::export]
+pub fn process_pixels(
+    rgba: Vec<u8>,
+    width: u32,
+    height: u32,
+    preset: SizePreset,
+    listener: Box<dyn ProgressListener>,
+) -> Result<ProcessedPhoto, PhotonError> {
+    let out =
+        pipeline::process_rgba_with_progress(&rgba, width, height, preset.into(), &mut |f| {
+            listener.on_progress(f)
+        })?;
+    Ok(out.into())
+}
+
+impl From<pipeline::Processed> for ProcessedPhoto {
+    fn from(out: pipeline::Processed) -> Self {
+        ProcessedPhoto {
+            jpeg: out.jpeg,
+            width: out.width,
+            height: out.height,
+            distance: out.distance,
+        }
+    }
 }
 
 /// Email-safe, unique `.jpg` names for a batch, in the same order as `inputs`.

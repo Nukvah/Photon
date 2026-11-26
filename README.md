@@ -12,6 +12,9 @@ email-safe JPEGs, and hands them straight back to share.
 | Path | What |
 | --- | --- |
 | `app/` | Android app (min API 26, target API 36) |
+| `app/.../ui/` | Compose screens and `PhotonViewModel`; pure Kotlin, tested on the JVM |
+| `app/.../pipeline/` | `RustPipeline` (the real one) and `FakePipeline` (tests and screenshots) |
+| `app/.../system/` | Android glue: reading shared photos, AVIF/HEIC decoding, thumbnails, FileProvider sharing, saved state |
 | `core/` | Rust core library `photon-core` |
 | `core/src/` | Pipeline: `decode` → `resize` → `encode` (jpegli), tied together in `pipeline` |
 | `core/cli/` | `photon-cli`, a desktop tool that runs the pipeline over a folder |

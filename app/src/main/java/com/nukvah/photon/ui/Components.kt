@@ -1,6 +1,7 @@
 package com.nukvah.photon.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,7 +9,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -17,11 +20,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -29,6 +37,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -66,7 +75,7 @@ fun PillButton(
 ) {
     val shape = RoundedCornerShape(50)
     val base = modifier
-        .height(height)
+        .heightIn(min = height)
         .clip(shape)
         .then(
             if (filled) {
@@ -76,13 +85,14 @@ fun PillButton(
             },
         )
         .clickable(role = Role.Button, onClick = onClick)
+        .padding(horizontal = 16.dp, vertical = 6.dp)
     val color = if (filled) Color.White else PhotonColors.Ink
     Row(base, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
         if (icon != null) {
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(if (filled) 22.dp else 18.dp))
             Spacer(Modifier.width(if (filled) 10.dp else 8.dp))
         }
-        Text(text, style = textStyle, color = color)
+        Text(text, style = textStyle, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -143,15 +153,30 @@ fun SizeChip(text: String, selected: Boolean, onClick: () -> Unit) {
 
 /** Placeholder thumbnail: the photo's colour swatch with a picture icon. */
 @Composable
-fun Thumb(index: Int, modifier: Modifier = Modifier, showIcon: Boolean = false, corner: Dp = 10.dp) {
+fun Thumb(index: Int, modifier: Modifier = Modifier, showIcon: Boolean = false, corner: Dp = 10.dp, key: String? = null) {
+    val thumbnails = LocalThumbnails.current
+    val picture by produceState<ImageBitmap?>(null, key, thumbnails) {
+        value = if (key != null && thumbnails != null) thumbnails.load(key) else null
+    }
     Box(
         modifier
             .clip(RoundedCornerShape(corner))
             .background(PhotonColors.Thumbs[index % PhotonColors.Thumbs.size]),
         contentAlignment = Alignment.Center,
     ) {
-        if (showIcon) {
+        val loaded = picture
+        if (loaded != null) {
+            Image(loaded, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        } else if (showIcon) {
             Icon(PhotonIcons.Photo, contentDescription = null, tint = Color(0x5915171C), modifier = Modifier.size(28.dp))
         }
     }
 }
+
+/** Loads small previews by key: an original's content URI or an output file path. */
+fun interface Thumbnails {
+    suspend fun load(key: String): ImageBitmap?
+}
+
+/** Null in previews and screenshot tests, which then show coloured placeholders. */
+val LocalThumbnails = staticCompositionLocalOf<Thumbnails?> { null }

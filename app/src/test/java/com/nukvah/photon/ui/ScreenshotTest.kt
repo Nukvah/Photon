@@ -1,5 +1,6 @@
 package com.nukvah.photon.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -45,6 +46,26 @@ class ScreenshotTest {
     fun doneOverTenMegabytes() = shot("3-done-over-10mb") {
         val big = doneBatch(PhotoSize.SHARP).let { d -> d.copy(results = d.results.map { it.copy(sizeBytes = 1_600_000) }) }
         DoneScreen(big, {}, {}, {}, {}, {}, {})
+    }
+
+    /** Many phones run with larger text; the bottom buttons stack instead of wrapping. */
+    @Test
+    @Config(fontScale = 1.3f)
+    fun doneLargeText() = shot("3-done-large-text") {
+        DoneScreen(doneBatch(), {}, {}, {}, {}, {}, {})
+    }
+
+    @Test
+    fun emailAppPicker() = shot("4-email-app") {
+        val apps = listOf(AppChoice("a", "Email"), AppChoice("b", "Larkmail"), AppChoice("c", "Postfly"))
+        androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.background(PhotonColors.Surface)) {
+            EmailAppList(apps, current = "b", onPick = {})
+        }
+    }
+
+    @Test
+    fun settings() = shot("5-settings") {
+        SettingsScreen("Larkmail", {}, {}, androidx.compose.ui.Modifier.background(PhotonColors.Background))
     }
 
     private fun shot(name: String, content: @Composable () -> Unit) {
