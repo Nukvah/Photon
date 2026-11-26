@@ -155,7 +155,7 @@ class MainActivity : ComponentActivity() {
      * Android's share sheet is not used, because phone makers change it: some open
      * their own email app, some hide the others behind a sideways scroll.
      */
-    private fun shareEmail(batch: UiState.Done) {
+    private fun emailBatch(batch: UiState.Done) {
         val apps = emailApps.installed()
         val chosen = emailApps.chosen?.takeIf { id -> apps.any { it.id == id } }
         when {
@@ -197,7 +197,7 @@ class MainActivity : ComponentActivity() {
         override fun selectPhotos() =
             pickPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
 
-        override fun shareEmail(batch: UiState.Done) = whenAny(batch) { shareEmail(batch) }
+        override fun shareEmail(batch: UiState.Done) = whenAny(batch) { emailBatch(batch) }
         override fun otherApps(batch: UiState.Done) = whenAny(batch) { sharing.otherApps(batch.results) }
         override fun shareOne(batch: UiState.Done, index: Int) = sharing.otherApps(listOf(batch.results[index]))
         override fun saveToFolder(batch: UiState.Done) = whenAny(batch) {
