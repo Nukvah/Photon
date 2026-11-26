@@ -24,14 +24,25 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.ByteBuffer
 
-/** Largest image handed to Rust as pixels; bigger ones are halved while decoding. */
-private const val MAX_DECODED_PIXELS = 50_000_000L
+/**
+ * Largest image handed to Rust as pixels; bigger ones are halved while decoding until
+ * they fit. 16 MP is still 8 times the Sharp size, so quality does not suffer.
+ */
+private const val MAX_DECODED_PIXELS = 16_000_000L
 
 /** Reads shared photos through the content resolver; decodes AVIF/HEIC with Android. */
 class AndroidPhotoReader(private val resolver: ContentResolver) : PhotoReader {
 
     override fun read(id: String): ByteArray =
         resolver.openInputStream(Uri.parse(id))?.use { it.readBytes() } ?: throw FileNotFoundException(id)
+
+    override val shrinksWhileDecoding: Boolean = Build.VERSION.SDK_INT >= 28
+
+    override fun pixelCount(bytes: ByteArray): Long? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        return if (bounds.outWidth > 0 && bounds.outHeight > 0) bounds.outWidth.toLong() * bounds.outHeight else null
+    }
 
     override fun decodePixels(bytes: ByteArray): Pixels {
         val bitmap = if (Build.VERSION.SDK_INT >= 28) decodeModern(bytes) else decodeLegacy(bytes)

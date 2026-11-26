@@ -85,7 +85,7 @@ class PhotonViewModel(
                 processing = processing.apply(event, clock() - startedAt)
                 _state.value = processing
             }
-            val done = processing.toDone()
+            val done = processing.toDone(elapsedMillis = clock() - startedAt)
             val shown = if (done.results.isEmpty() && fallback != null) fallback else done
             if (shown.results.isNotEmpty()) {
                 lastBatch = shown

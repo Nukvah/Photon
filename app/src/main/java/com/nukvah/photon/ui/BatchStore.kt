@@ -3,6 +3,7 @@ package com.nukvah.photon.ui
 import com.nukvah.photon.pipeline.PhotoInput
 import com.nukvah.photon.pipeline.PhotoResult
 import com.nukvah.photon.pipeline.PhotoSize
+import com.nukvah.photon.pipeline.Problem
 
 /** What Photon remembers between launches: the size last used and the last finished batch. */
 data class Remembered(val size: PhotoSize = PhotoSize.STANDARD, val lastBatch: UiState.Done? = null)
@@ -33,7 +34,8 @@ object BatchCodec {
     fun encode(batch: UiState.Done): String = buildString {
         appendLine(HEADER)
         appendLine(line("size", batch.size.name))
-        appendLine(line("failed", batch.failedCount))
+        appendLine(line("elapsed", batch.elapsedMillis))
+        batch.problems.forEach { appendLine(line("problem", it.name)) }
         batch.inputs.forEach { appendLine(line("in", it.id, it.name, it.sizeBytes)) }
         batch.results.forEach { appendLine(line("out", it.name, it.width, it.height, it.sizeBytes, it.file)) }
     }
@@ -43,18 +45,20 @@ object BatchCodec {
         val lines = text.lines().filter { it.isNotEmpty() }
         if (lines.firstOrNull() != HEADER) return null
         var size: PhotoSize? = null
-        var failed = 0
+        var elapsed = 0L
+        val problems = mutableListOf<Problem>()
         val inputs = mutableListOf<PhotoInput>()
         val results = mutableListOf<PhotoResult>()
         for (fields in lines.drop(1).map { it.split('\t') }) {
             when (fields[0]) {
                 "size" -> size = PhotoSize.valueOf(fields[1])
-                "failed" -> failed = fields[1].toInt()
+                "elapsed" -> elapsed = fields[1].toLong()
+                "problem" -> problems += Problem.valueOf(fields[1])
                 "in" -> inputs += PhotoInput(fields[1], fields[2], fields[3].toLong())
                 "out" -> results += PhotoResult(fields[1], fields[2].toInt(), fields[3].toInt(), fields[4].toLong(), fields[5])
             }
         }
-        if (size == null || results.isEmpty()) null else UiState.Done(size, inputs, results, failed)
+        if (size == null || results.isEmpty()) null else UiState.Done(size, inputs, results, problems, elapsed)
     }.getOrNull()
 
     private fun line(vararg fields: Any): String =

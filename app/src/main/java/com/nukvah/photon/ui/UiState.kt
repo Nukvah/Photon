@@ -4,6 +4,7 @@ import com.nukvah.photon.pipeline.PhotoInput
 import com.nukvah.photon.pipeline.PhotoResult
 import com.nukvah.photon.pipeline.PhotoSize
 import com.nukvah.photon.pipeline.PipelineEvent
+import com.nukvah.photon.pipeline.Problem
 import kotlin.math.ceil
 
 /** Above this, some mail servers reject the message (the large providers allow 20 to 25 MB). */
@@ -38,8 +39,12 @@ sealed interface UiState {
         override val size: PhotoSize,
         val inputs: List<PhotoInput>,
         val results: List<PhotoResult>,
-        val failedCount: Int,
+        /** One entry per skipped photo. */
+        val problems: List<Problem> = emptyList(),
+        /** How long the batch took; shown on the developer screen for speed checks. */
+        val elapsedMillis: Long = 0,
     ) : UiState {
+        val failedCount: Int get() = problems.size
         val inputBytes: Long get() = inputs.sumOf { it.sizeBytes }
         val outputBytes: Long get() = results.sumOf { it.sizeBytes }
         val fitsAnyInbox: Boolean get() = outputBytes <= INBOX_SAFE_BYTES
@@ -59,7 +64,7 @@ sealed interface Tile {
         override val progress = 1f
     }
 
-    data class Failed(val reason: String) : Tile {
+    data class Failed(val problem: Problem) : Tile {
         override val progress = 1f
     }
 }
@@ -73,7 +78,7 @@ fun UiState.Processing.apply(event: PipelineEvent, elapsedMillis: Long): UiState
     val tile = when (event) {
         is PipelineEvent.Progress -> Tile.Working(event.fraction.coerceIn(0f, 1f))
         is PipelineEvent.Finished -> Tile.Done(event.result)
-        is PipelineEvent.Failed -> Tile.Failed(event.reason)
+        is PipelineEvent.Failed -> Tile.Failed(event.problem)
     }
     val next = copy(tiles = tiles.toMutableList().also { it[event.index] = tile })
     return next.copy(secondsLeft = estimateSecondsLeft(next.overallProgress, elapsedMillis))
@@ -88,9 +93,10 @@ fun estimateSecondsLeft(progress: Float, elapsedMillis: Long): Int? {
 }
 
 /** The Done state once every tile has finished or failed, in input order. */
-fun UiState.Processing.toDone(): UiState.Done = UiState.Done(
+fun UiState.Processing.toDone(elapsedMillis: Long = 0): UiState.Done = UiState.Done(
     size = size,
     inputs = inputs,
     results = tiles.mapNotNull { (it as? Tile.Done)?.result },
-    failedCount = tiles.count { it is Tile.Failed },
+    problems = tiles.mapNotNull { (it as? Tile.Failed)?.problem },
+    elapsedMillis = elapsedMillis,
 )

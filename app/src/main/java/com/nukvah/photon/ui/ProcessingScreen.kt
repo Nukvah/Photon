@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nukvah.photon.R
+import com.nukvah.photon.pipeline.PhotoInput
 import kotlin.math.roundToInt
 
 @Composable
@@ -69,7 +71,7 @@ fun ProcessingScreen(state: UiState.Processing, onCancel: () -> Unit, modifier: 
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f).fillMaxHeight(),
         ) {
-            itemsIndexed(state.tiles) { index, tile -> TileView(index, tile, state.inputs[index].id) }
+            itemsIndexed(state.tiles) { index, tile -> TileView(index, tile, state.inputs[index]) }
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
@@ -122,11 +124,21 @@ private fun OverallCard(state: UiState.Processing) {
 }
 
 @Composable
-private fun TileView(index: Int, tile: Tile, thumbKey: String) {
+private fun TileView(index: Int, tile: Tile, input: PhotoInput) {
     val waiting = tile is Tile.Waiting
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val (label, color) = when (tile) {
+        is Tile.Done -> formatSize(tile.result.sizeBytes) to PhotonColors.Success
+        is Tile.Working -> "${(tile.progress * 100).roundToInt()}%" to PhotonColors.Ink
+        is Tile.Failed -> stringResource(R.string.processing_failed) to PhotonColors.Warning
+        Tile.Waiting -> stringResource(R.string.processing_waiting) to PhotonColors.Faint
+    }
+    val spoken = stringResource(R.string.processing_tile, input.name, label)
+    Column(
+        Modifier.clearAndSetSemantics { contentDescription = spoken },
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f).alpha(if (waiting) 0.45f else 1f)) {
-            Thumb(index, Modifier.fillMaxSize(), showIcon = true, corner = 14.dp, key = thumbKey)
+            Thumb(index, Modifier.fillMaxSize(), showIcon = true, corner = 14.dp, key = input.id)
             when (tile) {
                 is Tile.Done -> Box(
                     Modifier.align(Alignment.TopEnd).padding(6.dp).size(22.dp).clip(CircleShape).background(PhotonColors.Success),
@@ -142,12 +154,6 @@ private fun TileView(index: Int, tile: Tile, thumbKey: String) {
                 }
                 else -> Unit
             }
-        }
-        val (label, color) = when (tile) {
-            is Tile.Done -> formatSize(tile.result.sizeBytes) to PhotonColors.Success
-            is Tile.Working -> "${(tile.progress * 100).roundToInt()}%" to PhotonColors.Ink
-            is Tile.Failed -> stringResource(R.string.processing_failed) to PhotonColors.Warning
-            Tile.Waiting -> stringResource(R.string.processing_waiting) to PhotonColors.Faint
         }
         Text(label, style = PhotonType.Tiny, color = color, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
     }

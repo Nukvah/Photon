@@ -7,6 +7,7 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import com.nukvah.photon.pipeline.FakePipeline
 import com.nukvah.photon.pipeline.PhotoSize
 import com.nukvah.photon.pipeline.PipelineEvent
+import com.nukvah.photon.pipeline.Problem
 import com.nukvah.photon.pipeline.SamplePhotos
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,6 +47,36 @@ class ScreenshotTest {
     fun doneOverTenMegabytes() = shot("3-done-over-10mb") {
         val big = doneBatch(PhotoSize.SHARP).let { d -> d.copy(results = d.results.map { it.copy(sizeBytes = 1_600_000) }) }
         DoneScreen(big, {}, {}, {}, {}, {}, {})
+    }
+
+    @Test
+    fun doneNothingReadable() = shot("3-done-nothing") {
+        val none = doneBatch().copy(results = emptyList(), problems = listOf(Problem.UNSUPPORTED, Problem.UNSUPPORTED, Problem.UNREADABLE))
+        DoneScreen(none, {}, {}, {}, {}, {}, {})
+    }
+
+    @Test
+    fun doneWithSkipped() = shot("3-done-skipped") {
+        val some = doneBatch().let { it.copy(results = it.results.take(6), problems = listOf(Problem.UNSUPPORTED, Problem.TOO_LARGE)) }
+        DoneScreen(some, {}, {}, {}, {}, {}, {})
+    }
+
+    @Test
+    @Config(fontScale = 1.3f)
+    fun idleLargeText() = shot("1-idle-large-text") {
+        IdleScreen(UiState.Idle(PhotoSize.STANDARD, lastBatch = doneBatch()), {}, {}, {}, {})
+    }
+
+    @Test
+    @Config(fontScale = 2.0f)
+    fun idleLargestText() = shot("1-idle-largest-text") {
+        IdleScreen(UiState.Idle(PhotoSize.STANDARD, lastBatch = doneBatch()), {}, {}, {}, {})
+    }
+
+    @Test
+    @Config(fontScale = 1.3f)
+    fun processingLargeText() = shot("2-processing-large-text") {
+        ProcessingScreen(processingBatch(), onCancel = {})
     }
 
     /** Many phones run with larger text; the bottom buttons stack instead of wrapping. */

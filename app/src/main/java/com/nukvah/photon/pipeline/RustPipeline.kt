@@ -17,14 +17,24 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantReadWriteLock
 
 /** Where photos come from; Android's content resolver in the app, something simpler in tests. */
 interface PhotoReader {
     /** The file's bytes, exactly as shared. */
     fun read(id: String): ByteArray
 
-    /** Upright sRGB pixels for formats the Rust core cannot read (AVIF, HEIC, GIF, BMP…). */
+    /**
+     * Upright sRGB pixels for formats the Rust core cannot read (AVIF, HEIC, GIF, BMP…)
+     * and for very large photos; at most about 16 MP, shrunk while decoding when bigger.
+     */
     fun decodePixels(bytes: ByteArray): Pixels
+
+    /** Width × height from the file header, or null if it cannot be read cheaply. */
+    fun pixelCount(bytes: ByteArray): Long?
+
+    /** True when [decodePixels] shrinks big photos while decoding (cheap on memory). */
+    val shrinksWhileDecoding: Boolean
 }
 
 /** RGBA, 4 bytes per pixel, not premultiplied, rows top to bottom. */
@@ -97,25 +107,50 @@ class RustPipeline(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
-            // Unreadable file, revoked permission, out of memory: skip this photo, keep the batch.
-            PipelineEvent.Failed(index, e.message ?: e.javaClass.simpleName)
+            // Not a photo, revoked permission, full disk, out of memory: skip this photo, keep the batch.
+            PipelineEvent.Failed(index, classify(e), e.message ?: e.javaClass.simpleName)
         }
     }
 
     private fun encode(input: PhotoInput, preset: SizePreset, listener: ProgressListener): ProcessedPhoto {
         val bytes = reader.read(input.id)
-        if (CoreFormats.canRead(bytes)) {
-            try {
-                return processPhoto(bytes, preset, listener)
-            } catch (e: PhotonException.Decode) {
-                // Unusual variant of a known format (CMYK JPEG, say): let Android try.
+        val pixels = reader.pixelCount(bytes)
+        // Big photos run alone, so two of them never need their peak memory at once.
+        val large = pixels == null || pixels > LARGE_PIXELS
+        val lock = if (large) memory.writeLock() else memory.readLock()
+        lock.lock()
+        try {
+            val huge = pixels != null && pixels > HUGE_PIXELS && reader.shrinksWhileDecoding
+            if (CoreFormats.canRead(bytes) && !huge) {
+                try {
+                    return processPhoto(bytes, preset, listener)
+                } catch (e: PhotonException.Decode) {
+                    // Unusual variant of a known format (CMYK JPEG, say): let Android try.
+                }
             }
+            val decoded = try {
+                reader.decodePixels(bytes)
+            } catch (e: OutOfMemoryError) {
+                throw e
+            } catch (e: Exception) {
+                throw UnsupportedPhotoException(e)
+            }
+            return processPixels(decoded.rgba, decoded.width.toUInt(), decoded.height.toUInt(), preset, listener)
+        } finally {
+            lock.unlock()
         }
-        val pixels = reader.decodePixels(bytes)
-        return processPixels(pixels.rgba, pixels.width.toUInt(), pixels.height.toUInt(), preset, listener)
     }
 
+    /** Readers: ordinary photos side by side. Writer: one big photo with the memory to itself. */
+    private val memory = ReentrantReadWriteLock(true)
+
     companion object {
+        /** Above this, a photo runs alone (a 24 MP photo needs about 75 MB just for its pixels). */
+        const val LARGE_PIXELS = 24_000_000L
+
+        /** Above this, Android decodes at a reduced size first (50 MP and 200 MP phone cameras). */
+        const val HUGE_PIXELS = 40_000_000L
+
         /** Each photo needs one core and up to about 150 MB at its peak, so stay modest. */
         fun defaultParallelism(): Int = (Runtime.getRuntime().availableProcessors() / 3).coerceIn(1, 3)
     }

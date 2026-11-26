@@ -1,6 +1,6 @@
 //! Lanczos3 downscaling to a megapixel target. Never upscales.
 
-use fast_image_resize::images::Image;
+use fast_image_resize::images::{Image, ImageRef};
 use fast_image_resize::{CpuExtensions, FilterType, PixelType, ResizeAlg, ResizeOptions, Resizer};
 
 use crate::decode::RgbImage;
@@ -23,7 +23,8 @@ pub fn downscale(src: &RgbImage, target_pixels: u64) -> RgbImage {
     if (w, h) == (src.width, src.height) {
         return src.clone();
     }
-    let src_img = Image::from_vec_u8(src.width, src.height, src.pixels.clone(), PixelType::U8x3)
+    // Borrowed, not copied: a 50 MP photo is 150 MB of pixels.
+    let src_img = ImageRef::new(src.width, src.height, &src.pixels, PixelType::U8x3)
         .expect("buffer matches size");
     let mut dst = Image::new(w, h, PixelType::U8x3);
     let mut resizer = Resizer::new();

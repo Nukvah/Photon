@@ -134,8 +134,8 @@ pub fn process_with_progress(
     preset: Preset,
     progress: Progress,
 ) -> Result<Processed, PipelineError> {
-    let (image, decode_info) = decode::decode(input)?;
-    finish(image, decode_info, preset, progress)
+    let (image, decode_info, orientation) = decode::decode_unoriented(input)?;
+    finish(image, decode_info, orientation, preset, progress)
 }
 
 /// Same pipeline for pixels another decoder produced (Android decodes AVIF and HEIC).
@@ -153,12 +153,20 @@ pub fn process_rgba_with_progress(
         exif_orientation: 1,
         icc_converted: false,
     };
-    finish(image, info, preset, progress)
+    finish(
+        image,
+        info,
+        image::metadata::Orientation::NoTransforms,
+        preset,
+        progress,
+    )
 }
 
+/// Resize first, then rotate: same picture, far less memory for big photos.
 fn finish(
     image: decode::RgbImage,
     decode_info: DecodeInfo,
+    orientation: image::metadata::Orientation,
     preset: Preset,
     progress: Progress,
 ) -> Result<Processed, PipelineError> {
@@ -169,6 +177,7 @@ fn finish(
     let spec = preset.spec();
     let small = resize::downscale(&image, spec.target_pixels);
     drop(image);
+    let small = decode::orient(small, orientation);
     if !progress(0.55) {
         return Err(PipelineError::Cancelled);
     }
