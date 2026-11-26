@@ -1,0 +1,17 @@
+[package]
+name = "photon-jpegli-sys"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Builds Google's jpegli encoder (git submodule) plus a tiny C shim for photon-core."
+links = "jpegli"
+build = "build.rs"
+
+[lib]
+name = "photon_jpegli_sys"
+
+[dependencies]
+
+[build-dependencies]
+cmake = "0.1"
+cc = "1"

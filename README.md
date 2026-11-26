@@ -13,16 +13,19 @@ email-safe JPEGs, and hands them straight back to share.
 | --- | --- |
 | `app/` | Android app (min API 26, target API 36) |
 | `core/` | Rust core library `photon-core` |
+| `core/jpegli-sys/` | Builds Google's jpegli (git submodule) and a small C shim over it |
 | `core/uniffi.toml` | Kotlin package for the generated bindings |
 | `core/deny.toml` | License policy: CI fails on GPL or unknown licenses |
 | `scripts/build-rust.sh` | Builds the core for each Android ABI and generates bindings |
+| `scripts/fetch-jpegli.sh` | Fetches the jpegli submodule and the parts of it the build needs |
 | `scripts/check-16kb.sh` | Verifies native libraries in an APK support 16 KB pages |
 
 ## Build
 
-Needs: JDK 17, Android SDK with NDK `28.2.13676358`, Rust (stable), and `cargo-ndk`.
+Needs: JDK 17, Android SDK with NDK `28.2.13676358`, Rust (stable), `cargo-ndk`, CMake and a C++ compiler.
 
 ```sh
+scripts/fetch-jpegli.sh        # once after cloning
 rustup target add aarch64-linux-android x86_64-linux-android
 cargo install cargo-ndk
 ./gradlew assembleDebug        # builds Rust first, then the app
@@ -35,7 +38,8 @@ Rust only:
 
 ```sh
 cd core
-cargo test
+cargo test --release
+cargo run --release --example bench   # jpegli size/speed on a synthetic image
 ```
 
 ## 16 KB pages

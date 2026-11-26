@@ -1,0 +1,3 @@
+[submodule "core/jpegli-sys/jpegli"]
+	path = core/jpegli-sys/jpegli
+	url = https://github.com/google/jpegli
