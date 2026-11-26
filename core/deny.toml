@@ -1,10 +1,17 @@
-# cargo-deny: fail CI on licenses that would force Photon's source to be published.
+# cargo-deny: Photon is GPL-3.0-or-later, so every dependency must be GPLv3-compatible.
 [graph]
 all-features = false
 
 [licenses]
-# Anything not listed here (GPL, AGPL, LGPL, unknown) fails the build.
+# Anything not listed here fails the build: GPLv3-incompatible licenses (GPL-2.0-only,
+# LGPL-2.1-only, EPL, CDDL...), AGPL (stricter than Photon's own terms) and unknown ones.
 allow = [
+    "GPL-3.0-only",
+    "GPL-3.0-or-later",
+    "GPL-2.0-or-later",
+    "LGPL-3.0-only",
+    "LGPL-3.0-or-later",
+    "LGPL-2.1-or-later",
     "MIT",
     "Apache-2.0",
     "Apache-2.0 WITH LLVM-exception",
@@ -19,8 +26,8 @@ allow = [
 confidence-threshold = 0.9
 # Licenses we pre-approve for later dependencies (jpegli is BSD-3-Clause).
 unused-allowed-license = "allow"
-# Our own crate is not published, so it needs no license entry.
-private = { ignore = true }
+# Check Photon's own crates too, so each one keeps its license entry.
+private = { ignore = false }
 
 [bans]
 multiple-versions = "allow"
