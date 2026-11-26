@@ -13,6 +13,9 @@ email-safe JPEGs, and hands them straight back to share.
 | --- | --- |
 | `app/` | Android app (min API 26, target API 36) |
 | `core/` | Rust core library `photon-core` |
+| `core/src/` | Pipeline: `decode` → `resize` → `encode` (jpegli), tied together in `pipeline` |
+| `core/cli/` | `photon-cli`, a desktop tool that runs the pipeline over a folder |
+| `core/tests/golden/` | Expected output hashes per CPU type |
 | `core/jpegli-sys/` | Builds Google's jpegli (git submodule) and a small C shim over it |
 | `core/uniffi.toml` | Kotlin package for the generated bindings |
 | `core/deny.toml` | License policy: CI fails on GPL or unknown licenses |
@@ -38,9 +41,27 @@ Rust only:
 
 ```sh
 cd core
-cargo test --release
+cargo test --workspace --release
 cargo run --release --example bench   # jpegli size/speed on a synthetic image
+cargo run --release -p photon-cli -- --preset standard ~/Pictures/in /tmp/out
 ```
+
+`photon-cli` writes one JPEG per photo plus `manifest.tsv` with sizes and SHA-256 hashes.
+
+### Pipeline and determinism
+
+Every photo goes through the same fixed steps: decode (JPEG, PNG, WebP), flatten
+transparency onto white, convert the ICC profile to sRGB, bake in the EXIF rotation,
+Lanczos3 downscale to the preset's pixel budget, then jpegli at distance 1.0. Only if
+the file is over the preset's size cap does a fixed 5-step search lower quality.
+Metadata is never copied.
+
+Same input and preset give the same bytes on every device of one CPU type. To keep
+that true, every SIMD path is chosen at compile time, not by probing the CPU: highway
+is built with `HWY_COMPILE_ONLY_STATIC`, the resizer is pinned to NEON (arm64) or plain
+code (x86_64), and moxcms is built with only its NEON paths. If an output change is
+intended, re-bless the golden hashes with
+`PHOTON_BLESS=1 cargo test --release --test golden`.
 
 ## 16 KB pages
 

@@ -28,10 +28,17 @@ jobs:
         with:
           workspaces: core
       - run: cargo fmt --check
-      - run: cargo clippy --all-targets --all-features -- -D warnings
-      - run: cargo test --release
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      # Includes the golden output test (tests/golden.rs) against tests/golden/x86_64.tsv.
+      - run: cargo test --workspace --release
       - name: Encoder benchmark (host, synthetic image)
         run: cargo run --release --example bench
+      - name: CLI smoke test
+        run: |
+          mkdir -p "$RUNNER_TEMP/in"
+          cp jpegli-sys/jpegli/third_party/libjpeg-turbo/testimages/testorig.jpg "$RUNNER_TEMP/in/"
+          cargo run --release -p photon-cli -- --preset standard "$RUNNER_TEMP/in" "$RUNNER_TEMP/out"
+          test -s "$RUNNER_TEMP/out/testorig.jpg"
 
   licenses:
     name: License check (no GPL)

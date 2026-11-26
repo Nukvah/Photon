@@ -1,9 +1,15 @@
 //! Photon core: all image work for the Android app lives here.
 //!
-//! So far: bridge smoke tests (Stage 0) and the jpegli encoder spike (Stage 1).
-//! The full pipeline (decode, resize, size search) arrives in Stage 2.
+//! Modules, in pipeline order: `decode` (any format to upright sRGB), `resize`
+//! (Lanczos3 to the preset's pixel budget), `encode` (jpegli) and `pipeline`
+//! (presets, size search, file names). Kotlin sees only the `#[uniffi::export]` items.
 
+pub mod decode;
 pub mod encode;
+pub mod pipeline;
+pub mod resize;
+#[doc(hidden)]
+pub mod testimg;
 
 uniffi::setup_scaffolding!();
 
@@ -12,12 +18,16 @@ uniffi::setup_scaffolding!();
 pub enum PhotonError {
     /// Field is `reason`, not `message`: Kotlin exceptions already have `message`.
     Encode { reason: String },
+    /// The file is not a photo we can read (unsupported format, corrupt, too large).
+    Decode { reason: String },
 }
 
 impl std::fmt::Display for PhotonError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PhotonError::Encode { reason } => write!(f, "{reason}"),
+            PhotonError::Encode { reason } | PhotonError::Decode { reason } => {
+                write!(f, "{reason}")
+            }
         }
     }
 }
@@ -30,6 +40,66 @@ impl From<encode::EncodeError> for PhotonError {
             reason: e.to_string(),
         }
     }
+}
+
+impl From<pipeline::PipelineError> for PhotonError {
+    fn from(e: pipeline::PipelineError) -> Self {
+        match e {
+            pipeline::PipelineError::Decode(d) => PhotonError::Decode {
+                reason: d.to_string(),
+            },
+            pipeline::PipelineError::Encode(d) => PhotonError::Encode {
+                reason: d.to_string(),
+            },
+        }
+    }
+}
+
+/// Output size choice shown in the app.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum SizePreset {
+    Small,
+    Standard,
+    Sharp,
+}
+
+impl From<SizePreset> for pipeline::Preset {
+    fn from(p: SizePreset) -> Self {
+        match p {
+            SizePreset::Small => pipeline::Preset::Small,
+            SizePreset::Standard => pipeline::Preset::Standard,
+            SizePreset::Sharp => pipeline::Preset::Sharp,
+        }
+    }
+}
+
+/// One finished photo, ready to share.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct ProcessedPhoto {
+    pub jpeg: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+    /// jpegli distance used; lower is better quality.
+    pub distance: f32,
+}
+
+/// Runs the full pipeline on one photo file's bytes.
+/// Call from a background thread; each call is independent, so photos can run in parallel.
+#[uniffi::export]
+pub fn process_photo(input: Vec<u8>, preset: SizePreset) -> Result<ProcessedPhoto, PhotonError> {
+    let out = pipeline::process(&input, preset.into())?;
+    Ok(ProcessedPhoto {
+        jpeg: out.jpeg,
+        width: out.width,
+        height: out.height,
+        distance: out.distance,
+    })
+}
+
+/// Email-safe, unique `.jpg` names for a batch, in the same order as `inputs`.
+#[uniffi::export]
+pub fn output_file_names(inputs: Vec<String>) -> Vec<String> {
+    pipeline::output_file_names(&inputs)
 }
 
 /// Result of encoding the synthetic test image with jpegli.
