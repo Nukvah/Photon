@@ -83,6 +83,7 @@ def main() -> None:
     apache = read(TEXTS / "Apache-2.0.txt")
     llvm = apache + "\n" + read(TEXTS / "LLVM-exception.txt")
     entries += [
+        ("Photon", "", "GPL-3.0-or-later", read(ROOT / "LICENSE")),
         ("Rust standard library", "", "MIT OR Apache-2.0", rust_mit),
         ("jpegli", "", "BSD-3-Clause", read(JPEGLI / "LICENSE")),
         ("Highway", "", "Apache-2.0 OR BSD-3-Clause", read(JPEGLI / "third_party" / "highway" / "LICENSE")),

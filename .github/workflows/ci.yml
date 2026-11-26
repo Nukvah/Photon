@@ -41,7 +41,7 @@ jobs:
           test -s "$RUNNER_TEMP/out/testorig.jpg"
 
   licenses:
-    name: License check (no GPL)
+    name: License check (GPLv3-compatible)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

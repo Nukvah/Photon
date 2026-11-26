@@ -3,6 +3,7 @@ name = "photon-cli"
 version = "0.1.0"
 edition = "2021"
 publish = false
+license = "GPL-3.0-or-later"
 description = "Desktop test tool: runs the Photon pipeline over a folder of photos."
 
 [dependencies]

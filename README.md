@@ -21,7 +21,7 @@ email-safe JPEGs, and hands them straight back to share.
 | `core/tests/golden/` | Expected output hashes per CPU type |
 | `core/jpegli-sys/` | Builds Google's jpegli (git submodule) and a small C shim over it |
 | `core/uniffi.toml` | Kotlin package for the generated bindings |
-| `core/deny.toml` | License policy: CI fails on GPL or unknown licenses |
+| `core/deny.toml` | License policy: CI fails on licenses that are not GPLv3-compatible, or unknown |
 | `scripts/build-rust.sh` | Builds the core for each Android ABI and generates bindings |
 | `scripts/fetch-jpegli.sh` | Fetches the jpegli submodule and the parts of it the build needs |
 | `scripts/check-16kb.sh` | Verifies native libraries in an APK support 16 KB pages |
@@ -83,7 +83,7 @@ C/C++, and CI checks the final APK with `scripts/check-16kb.sh`.
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push:
 
 - Rust: format, clippy, tests
-- License check with cargo-deny
+- License check with cargo-deny (every dependency must be GPLv3-compatible)
 - Android: builds the debug APK for arm64-v8a and x86_64, runs unit tests, checks 16 KB
   alignment and permissions, and uploads the APK as a build artifact you can install on a phone.
   The screenshot tests (including the Play Store set in `app/src/test/screenshots/store/`) are uploaded too.
@@ -120,3 +120,11 @@ each build (`scripts/gen-licenses.py`), from `Cargo.lock`, the jpegli sources an
 ## Docs
 
 - Development plan, tech spec and UI mockups are kept in the project's Claude docs.
+
+## License
+
+Photon is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3
+of the License, or (at your option) any later version. See [LICENSE](LICENSE).
+
+The bundled libraries keep their own licenses, listed under Settings > Open source licenses.
