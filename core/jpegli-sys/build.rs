@@ -44,6 +44,11 @@ fn main() {
         // libjpeg 8 ABI (JPEG_LIB_VERSION 80) for the bundled jpeglib.h.
         .define("JPEGLI_LIBJPEG_LIBRARY_SOVERSION", "8")
         .define("JPEGLI_LIBJPEG_LIBRARY_VERSION", "8.2.2")
+        // One SIMD path per CPU type (NEON on arm64), chosen at compile time. Without
+        // this, highway picks the widest the phone has at run time (e.g. SVE2), and
+        // phones of one CPU type could produce different bytes.
+        .cxxflag("-DHWY_COMPILE_ONLY_STATIC=1")
+        .cflag("-DHWY_COMPILE_ONLY_STATIC=1")
         .build_target("jpegli-static");
 
     if android {

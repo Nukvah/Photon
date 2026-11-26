@@ -21,9 +21,18 @@ cli = ["uniffi/cli"]
 [dependencies]
 uniffi = "0.33"
 photon-jpegli-sys = { path = "jpegli-sys" }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+# Only the NEON paths, which every arm64 phone has: no runtime CPU detection, so
+# colour conversion gives the same bytes on every phone of one CPU type.
+moxcms = { version = "0.9", default-features = false, features = ["lut", "neon_shaper_paths", "neon_shaper_fixed_point_paths"] }
+fast_image_resize = "6"
+
+[dev-dependencies]
+moxcms = { version = "0.9", default-features = false }
+sha2 = "0.10"
 
 [workspace]
-members = [".", "jpegli-sys"]
+members = [".", "jpegli-sys", "cli"]
 
 [profile.release]
 opt-level = 3

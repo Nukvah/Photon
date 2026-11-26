@@ -1,0 +1,10 @@
+[package]
+name = "photon-cli"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Desktop test tool: runs the Photon pipeline over a folder of photos."
+
+[dependencies]
+photon-core = { path = ".." }
+sha2 = "0.10"
