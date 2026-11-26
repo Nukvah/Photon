@@ -96,6 +96,31 @@ pub fn decode(bytes: &[u8]) -> Result<(RgbImage, DecodeInfo), DecodeError> {
     ))
 }
 
+/// Pixels from another decoder: RGBA (not premultiplied), flattened onto white like files.
+pub fn from_rgba(rgba: &[u8], width: u32, height: u32) -> Result<RgbImage, DecodeError> {
+    let pixels = u64::from(width) * u64::from(height);
+    if width == 0 || height == 0 || pixels > MAX_INPUT_PIXELS {
+        return Err(DecodeError(format!(
+            "image size {width}x{height} is not supported"
+        )));
+    }
+    if rgba.len() as u64 != pixels * 4 {
+        return Err(DecodeError(format!(
+            "expected {} bytes of RGBA for {width}x{height}, got {}",
+            pixels * 4,
+            rgba.len()
+        )));
+    }
+    let buffer = image::RgbaImage::from_raw(width, height, rgba.to_vec())
+        .ok_or_else(|| DecodeError("bad RGBA buffer".into()))?;
+    let rgb = flatten_to_rgb8(DynamicImage::ImageRgba8(buffer));
+    Ok(RgbImage {
+        width,
+        height,
+        pixels: rgb.into_raw(),
+    })
+}
+
 /// 8-bit RGB; alpha is composited onto white (email clients show white, not black).
 fn flatten_to_rgb8(image: DynamicImage) -> image::RgbImage {
     if !image.color().has_alpha() {

@@ -115,7 +115,7 @@ fun DoneScreen(
 @Composable
 private fun ResultRow(index: Int, result: PhotoResult, onShare: () -> Unit) {
     Row(Modifier.fillMaxWidth().height(64.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Thumb(index, Modifier.size(48.dp))
+        Thumb(index, Modifier.size(48.dp), key = result.file.ifEmpty { null })
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(result.name, style = PhotonType.BodyStrong, color = PhotonColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(

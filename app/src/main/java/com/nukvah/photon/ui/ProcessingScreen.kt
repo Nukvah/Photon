@@ -69,7 +69,7 @@ fun ProcessingScreen(state: UiState.Processing, onCancel: () -> Unit, modifier: 
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f).fillMaxHeight(),
         ) {
-            itemsIndexed(state.tiles) { index, tile -> TileView(index, tile) }
+            itemsIndexed(state.tiles) { index, tile -> TileView(index, tile, state.inputs[index].id) }
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
@@ -122,11 +122,11 @@ private fun OverallCard(state: UiState.Processing) {
 }
 
 @Composable
-private fun TileView(index: Int, tile: Tile) {
+private fun TileView(index: Int, tile: Tile, thumbKey: String) {
     val waiting = tile is Tile.Waiting
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f).alpha(if (waiting) 0.45f else 1f)) {
-            Thumb(index, Modifier.fillMaxSize(), showIcon = true, corner = 14.dp)
+            Thumb(index, Modifier.fillMaxSize(), showIcon = true, corner = 14.dp, key = thumbKey)
             when (tile) {
                 is Tile.Done -> Box(
                     Modifier.align(Alignment.TopEnd).padding(6.dp).size(22.dp).clip(CircleShape).background(PhotonColors.Success),

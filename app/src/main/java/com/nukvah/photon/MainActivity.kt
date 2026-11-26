@@ -1,11 +1,15 @@
 package com.nukvah.photon
 
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,34 +35,73 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nukvah.photon.core.benchmarkEncode
 import com.nukvah.photon.core.coreInfo
 import com.nukvah.photon.core.ping
-import com.nukvah.photon.pipeline.FakePipeline
+import com.nukvah.photon.pipeline.RustPipeline
+import com.nukvah.photon.system.AndroidPhotoReader
+import com.nukvah.photon.system.AndroidThumbnails
+import com.nukvah.photon.system.FileBatchStore
+import com.nukvah.photon.system.Sharing
+import com.nukvah.photon.system.describe
+import com.nukvah.photon.system.saveToTree
+import com.nukvah.photon.system.sharedImageUris
+import com.nukvah.photon.ui.LocalThumbnails
 import com.nukvah.photon.ui.PhotonActions
 import com.nukvah.photon.ui.PhotonApp
 import com.nukvah.photon.ui.PhotonColors
 import com.nukvah.photon.ui.PhotonTheme
 import com.nukvah.photon.ui.PhotonViewModel
 import com.nukvah.photon.ui.UiState
-import com.nukvah.photon.ui.startSampleBatch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Hosts the three Photon screens. Until Stage 4 the pipeline is [FakePipeline] and
- * sharing shows a placeholder message. The gear button opens the developer screen
- * (Rust core status and the jpegli benchmark).
+ * Hosts the three Photon screens. Photos arrive from the share sheet (straight to
+ * Processing) or the photo picker; results leave through FileProvider share intents
+ * or a folder the person picks. The gear opens the developer screen.
  */
 class MainActivity : ComponentActivity() {
+
+    private val vm: PhotonViewModel by viewModels {
+        viewModelFactory {
+            initializer {
+                val store = FileBatchStore(applicationContext)
+                val reader = AndroidPhotoReader(applicationContext.contentResolver)
+                PhotonViewModel(RustPipeline(reader, store::newBatchDir), store)
+            }
+        }
+    }
+
+    private val thumbnails by lazy { AndroidThumbnails(applicationContext.contentResolver) }
+    private val sharing by lazy { Sharing(this) }
+
+    private val pickPhotos = registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+        startWith(uris)
+    }
+
+    /** The batch waiting for the folder picker to answer; lost if Android ends the app meanwhile. */
+    private var pendingSave: UiState.Done? = null
+
+    private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+        val batch = pendingSave
+        pendingSave = null
+        if (tree != null && batch != null) saveTo(tree, batch)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // A share starts processing at once; a recreated activity (rotation) must not start it again.
+        if (savedInstanceState == null) startWith(intent.sharedImageUris())
+        addOnNewIntentListener { startWith(it.sharedImageUris()) }
+
         setContent {
             PhotonTheme {
-                val vm: PhotonViewModel = viewModel { PhotonViewModel(FakePipeline()) }
                 val state by vm.state.collectAsStateWithLifecycle()
                 var showDeveloper by rememberSaveable { mutableStateOf(false) }
                 val screen = Modifier.fillMaxSize().background(PhotonColors.Background).safeDrawingPadding()
@@ -66,23 +110,49 @@ class MainActivity : ComponentActivity() {
                     BackHandler { showDeveloper = false }
                     DevScreen(onBack = { showDeveloper = false }, modifier = screen)
                 } else {
-                    val actions = remember(vm) { Actions(vm) { showDeveloper = true } }
-                    PhotonApp(state, vm, actions, screen)
+                    val actions = remember { Actions { showDeveloper = true } }
+                    CompositionLocalProvider(LocalThumbnails provides thumbnails) {
+                        PhotonApp(state, vm, actions, screen)
+                    }
                 }
             }
         }
     }
 
-    private inner class Actions(val vm: PhotonViewModel, val onSettings: () -> Unit) : PhotonActions {
-        override fun selectPhotos() = vm.startSampleBatch()
-        override fun shareEmail(batch: UiState.Done) = comingSoon()
-        override fun saveToFolder(batch: UiState.Done) = comingSoon()
-        override fun otherApps(batch: UiState.Done) = comingSoon()
-        override fun shareOne(batch: UiState.Done, index: Int) = comingSoon()
+    /** Names and sizes come from quick provider queries, so the first frame already shows Processing. */
+    private fun startWith(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        vm.start(uris.map { contentResolver.describe(it) })
+    }
+
+    private fun saveTo(tree: Uri, batch: UiState.Done) {
+        lifecycleScope.launch {
+            val saved = withContext(Dispatchers.IO) { contentResolver.saveToTree(tree, batch.results) }
+            val message = if (saved == batch.results.size) {
+                resources.getQuantityString(R.plurals.saved_to_folder, saved, saved)
+            } else {
+                getString(R.string.save_failed, saved, batch.results.size)
+            }
+            Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private inner class Actions(val onSettings: () -> Unit) : PhotonActions {
+        override fun selectPhotos() =
+            pickPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+
+        override fun shareEmail(batch: UiState.Done) = whenAny(batch) { sharing.email(batch.results) }
+        override fun otherApps(batch: UiState.Done) = whenAny(batch) { sharing.otherApps(batch.results) }
+        override fun shareOne(batch: UiState.Done, index: Int) = sharing.otherApps(listOf(batch.results[index]))
+        override fun saveToFolder(batch: UiState.Done) = whenAny(batch) {
+            pendingSave = batch
+            pickFolder.launch(null)
+        }
+
         override fun openSettings() = onSettings()
 
-        private fun comingSoon() {
-            Toast.makeText(this@MainActivity, R.string.coming_soon, Toast.LENGTH_SHORT).show()
+        private fun whenAny(batch: UiState.Done, block: () -> Unit) {
+            if (batch.results.isNotEmpty()) block()
         }
     }
 }

@@ -5,8 +5,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 /**
- * Stand-in for the Rust pipeline until Stage 4: emits believable progress and
- * results with no image work, so the screens can be built and tested.
+ * Stand-in for [RustPipeline] in tests and screenshots: emits believable progress
+ * and results with no image work and no native code.
  * Output depends only on the inputs and size, never on the clock.
  */
 class FakePipeline(private val stepMillis: Long = 70) : PhotoPipeline {
