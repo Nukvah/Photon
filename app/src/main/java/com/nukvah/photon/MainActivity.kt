@@ -1,5 +1,6 @@
 package com.nukvah.photon
 
+import android.content.ActivityNotFoundException
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -16,12 +17,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -44,17 +42,21 @@ import com.nukvah.photon.core.ping
 import com.nukvah.photon.pipeline.RustPipeline
 import com.nukvah.photon.system.AndroidPhotoReader
 import com.nukvah.photon.system.AndroidThumbnails
+import com.nukvah.photon.system.EmailApps
 import com.nukvah.photon.system.FileBatchStore
 import com.nukvah.photon.system.Sharing
 import com.nukvah.photon.system.describe
 import com.nukvah.photon.system.saveToTree
 import com.nukvah.photon.system.sharedImageUris
+import com.nukvah.photon.ui.AppChoice
+import com.nukvah.photon.ui.EmailAppSheet
 import com.nukvah.photon.ui.LocalThumbnails
 import com.nukvah.photon.ui.PhotonActions
 import com.nukvah.photon.ui.PhotonApp
 import com.nukvah.photon.ui.PhotonColors
 import com.nukvah.photon.ui.PhotonTheme
 import com.nukvah.photon.ui.PhotonViewModel
+import com.nukvah.photon.ui.SettingsScreen
 import com.nukvah.photon.ui.UiState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -63,7 +65,7 @@ import kotlinx.coroutines.withContext
 /**
  * Hosts the three Photon screens. Photos arrive from the share sheet (straight to
  * Processing) or the photo picker; results leave through FileProvider share intents
- * or a folder the person picks. The gear opens the developer screen.
+ * or a folder the person picks. The gear opens Settings (email app, developer tools).
  */
 class MainActivity : ComponentActivity() {
 
@@ -79,6 +81,11 @@ class MainActivity : ComponentActivity() {
 
     private val thumbnails by lazy { AndroidThumbnails(applicationContext.contentResolver) }
     private val sharing by lazy { Sharing(this) }
+    private val emailApps by lazy { EmailApps(this) }
+
+    /** Open email app picker: the apps, and the batch to send once one is picked (null from Settings). */
+    private var emailPicker by mutableStateOf<Pair<List<AppChoice>, UiState.Done?>?>(null)
+    private var emailAppLabel by mutableStateOf<String?>(null)
 
     private val pickPhotos = registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
         startWith(uris)
@@ -103,17 +110,35 @@ class MainActivity : ComponentActivity() {
         setContent {
             PhotonTheme {
                 val state by vm.state.collectAsStateWithLifecycle()
-                var showDeveloper by rememberSaveable { mutableStateOf(false) }
+                var showSettings by rememberSaveable { mutableStateOf(false) }
                 val screen = Modifier.fillMaxSize().background(PhotonColors.Background).safeDrawingPadding()
 
-                if (showDeveloper) {
-                    BackHandler { showDeveloper = false }
-                    DevScreen(onBack = { showDeveloper = false }, modifier = screen)
+                if (showSettings) {
+                    BackHandler { showSettings = false }
+                    SettingsScreen(
+                        emailApp = emailAppLabel,
+                        onChangeEmailApp = { emailPicker = emailApps.installed() to null },
+                        onBack = { showSettings = false },
+                        modifier = screen,
+                    ) { DeveloperSection() }
                 } else {
-                    val actions = remember { Actions { showDeveloper = true } }
+                    val actions = remember { Actions { showSettings = true } }
                     CompositionLocalProvider(LocalThumbnails provides thumbnails) {
                         PhotonApp(state, vm, actions, screen)
                     }
+                }
+                emailPicker?.let { (apps, batch) ->
+                    EmailAppSheet(
+                        apps = apps,
+                        current = emailApps.chosen,
+                        onPick = { app ->
+                            emailPicker = null
+                            emailApps.chosen = app.id
+                            emailAppLabel = app.label
+                            batch?.let { sendEmail(it, app.id) }
+                        },
+                        onDismiss = { emailPicker = null },
+                    )
                 }
             }
         }
@@ -123,6 +148,37 @@ class MainActivity : ComponentActivity() {
     private fun startWith(uris: List<Uri>) {
         if (uris.isEmpty()) return
         vm.start(uris.map { contentResolver.describe(it) })
+    }
+
+    /**
+     * Share via email: the remembered app, the only one, or Photon's own picker.
+     * Android's share sheet is not used, because phone makers change it: some open
+     * their own email app, some hide the others behind a sideways scroll.
+     */
+    private fun shareEmail(batch: UiState.Done) {
+        val apps = emailApps.installed()
+        val chosen = emailApps.chosen?.takeIf { id -> apps.any { it.id == id } }
+        when {
+            chosen != null -> sendEmail(batch, chosen)
+            apps.isEmpty() -> sharing.otherApps(batch.results)
+            apps.size == 1 -> sendEmail(batch, apps[0].id)
+            else -> emailPicker = apps to batch
+        }
+    }
+
+    private fun sendEmail(batch: UiState.Done, emailApp: String) {
+        try {
+            sharing.email(batch.results, emailApp)
+        } catch (e: ActivityNotFoundException) {
+            // Uninstalled or disabled since it was picked: ask again next time.
+            emailApps.chosen = null
+            sharing.otherApps(batch.results)
+        }
+    }
+
+    private fun currentEmailAppLabel(): String? {
+        val id = emailApps.chosen ?: return null
+        return runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(id, 0)).toString() }.getOrNull()
     }
 
     private fun saveTo(tree: Uri, batch: UiState.Done) {
@@ -141,7 +197,7 @@ class MainActivity : ComponentActivity() {
         override fun selectPhotos() =
             pickPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
 
-        override fun shareEmail(batch: UiState.Done) = whenAny(batch) { sharing.email(batch.results) }
+        override fun shareEmail(batch: UiState.Done) = whenAny(batch) { shareEmail(batch) }
         override fun otherApps(batch: UiState.Done) = whenAny(batch) { sharing.otherApps(batch.results) }
         override fun shareOne(batch: UiState.Done, index: Int) = sharing.otherApps(listOf(batch.results[index]))
         override fun saveToFolder(batch: UiState.Done) = whenAny(batch) {
@@ -149,7 +205,10 @@ class MainActivity : ComponentActivity() {
             pickFolder.launch(null)
         }
 
-        override fun openSettings() = onSettings()
+        override fun openSettings() {
+            emailAppLabel = currentEmailAppLabel()
+            onSettings()
+        }
 
         private fun whenAny(batch: UiState.Done, block: () -> Unit) {
             if (batch.results.isNotEmpty()) block()
@@ -158,18 +217,17 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun DevScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun DeveloperSection() {
     val status = remember { loadCore() }
     val scope = rememberCoroutineScope()
     var running by remember { mutableStateOf(false) }
     var results by remember { mutableStateOf<List<String>>(emptyList()) }
 
     Column(
-        modifier = modifier.padding(24.dp).verticalScroll(rememberScrollState()),
+        modifier = Modifier.padding(top = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
-        Text(stringResource(R.string.developer), style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.developer), style = MaterialTheme.typography.titleMedium)
         Text(status.summary(), style = MaterialTheme.typography.bodyLarge)
         if (status is CoreStatus.Loaded) {
             Text(status.ping, style = MaterialTheme.typography.bodyMedium)

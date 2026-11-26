@@ -1,6 +1,5 @@
 package com.nukvah.photon.system
 
-import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ComponentName
 import android.content.ContentResolver
@@ -32,15 +31,9 @@ fun Intent.sharedImageUris(): List<Uri> {
 class Sharing(private val context: Context) {
     private val authority = "${context.packageName}.files"
 
-    /** Straight to the email app (the chooser lists only email apps when there are several). */
-    fun email(results: List<PhotoResult>) {
-        val send = sendIntent(results).apply { selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")) }
-        try {
-            context.startActivity(send)
-        } catch (e: ActivityNotFoundException) {
-            // No email app (or one that ignores the selector): offer every app instead.
-            otherApps(results)
-        }
+    /** Straight into a new email in `emailApp` (a package name) with the photos attached. */
+    fun email(results: List<PhotoResult>, emailApp: String) {
+        context.startActivity(sendIntent(results).setPackage(emailApp))
     }
 
     /** The system share sheet, without Photon itself in it. */

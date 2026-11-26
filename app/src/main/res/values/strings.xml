@@ -63,6 +63,13 @@
     </plurals>
     <string name="save_failed">Saved %1$d of %2$d photos. The folder may be full or read-only.</string>
 
+    <!-- Email app -->
+    <string name="email_app_title">Send with</string>
+    <string name="email_app_hint">Pick the app you write email in. Photon remembers it; you can change it in Settings.</string>
+    <string name="email_app_setting">Email app</string>
+    <string name="email_app_not_chosen">Asks the first time you share via email</string>
+    <string name="change">Change</string>
+
     <!-- Developer screen -->
     <string name="developer">Developer</string>
     <string name="back">Back</string>
