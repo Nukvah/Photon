@@ -1,0 +1,74 @@
+package com.nukvah.photon.ui
+
+import androidx.compose.runtime.Composable
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.takahirom.roborazzi.captureRoboImage
+import com.nukvah.photon.pipeline.FakePipeline
+import com.nukvah.photon.pipeline.PhotoSize
+import com.nukvah.photon.pipeline.PipelineEvent
+import com.nukvah.photon.pipeline.SamplePhotos
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+/**
+ * Renders each screen at the mockups' size (390 × 844 dp) with sample data.
+ * `./gradlew recordRoborazziDebug` writes the PNGs to app/src/test/screenshots/.
+ */
+@RunWith(AndroidJUnit4::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [35], qualifiers = "w390dp-h844dp-xxhdpi")
+class ScreenshotTest {
+
+    @Test
+    fun idle() = shot("1-idle") {
+        IdleScreen(UiState.Idle(PhotoSize.STANDARD), {}, {}, {}, {})
+    }
+
+    @Test
+    fun idleWithLastBatch() = shot("1-idle-last-batch") {
+        IdleScreen(UiState.Idle(PhotoSize.STANDARD, lastBatch = doneBatch()), {}, {}, {}, {})
+    }
+
+    @Test
+    fun processing() = shot("2-processing") {
+        ProcessingScreen(processingBatch(), onCancel = {})
+    }
+
+    @Test
+    fun done() = shot("3-done") {
+        DoneScreen(doneBatch(), {}, {}, {}, {}, {}, {})
+    }
+
+    @Test
+    fun doneOverTenMegabytes() = shot("3-done-over-10mb") {
+        val big = doneBatch(PhotoSize.SHARP).let { d -> d.copy(results = d.results.map { it.copy(sizeBytes = 1_600_000) }) }
+        DoneScreen(big, {}, {}, {}, {}, {}, {})
+    }
+
+    private fun shot(name: String, content: @Composable () -> Unit) {
+        captureRoboImage("src/test/screenshots/$name.png") { PhotonTheme(content) }
+    }
+
+    companion object {
+        private val inputs = SamplePhotos.batch
+
+        /** 5 of 8 finished, the 6th at 50 %, as in the mockup. */
+        fun processingBatch(): UiState.Processing {
+            var s = startProcessing(PhotoSize.STANDARD, inputs)
+            for (i in 0 until 5) {
+                s = s.apply(PipelineEvent.Finished(i, FakePipeline.fakeResult(inputs[i], PhotoSize.STANDARD)), 1_000L * (i + 1))
+            }
+            return s.apply(PipelineEvent.Progress(5, 0.5f), 5_400)
+        }
+
+        fun doneBatch(size: PhotoSize = PhotoSize.STANDARD): UiState.Done {
+            var s = startProcessing(size, inputs)
+            inputs.indices.forEach { i ->
+                s = s.apply(PipelineEvent.Finished(i, FakePipeline.fakeResult(inputs[i], size)), 100L * (i + 1))
+            }
+            return s.toDone()
+        }
+    }
+}

@@ -82,7 +82,19 @@ jobs:
           tool: cargo-ndk
       - uses: gradle/actions/setup-gradle@v4
       - name: Build debug APK and run unit tests
-        run: ./gradlew --stacktrace assembleDebug testDebugUnitTest
+        # recordRoborazziDebug runs all unit tests and renders the screenshot tests to PNG.
+        run: ./gradlew --stacktrace assembleDebug recordRoborazziDebug
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: app/build/reports/tests/
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: photon-screenshots
+          path: app/src/test/screenshots/
       - name: Check 16 KB page alignment
         run: |
           export READELF="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
