@@ -91,10 +91,10 @@
     <string name="licenses_intro">Photon is built with these libraries. Tap one to read its license.</string>
     <string name="version">Version %s</string>
     <string name="privacy_policy_url" translatable="false">https://github.com/Nukvah/Photon/blob/main/PRIVACY.md</string>
-    <string name="donate">Donate</string>
-    <string name="donate_summary">Photon is free. If it helps you, you can support its development.</string>
-    <!-- Donation page opened from Settings. Leave empty to hide the Donate row. -->
-    <string name="donate_url" translatable="false">https://ko-fi.com/xzpy1</string>
+    <string name="about">About Photon</string>
+    <string name="about_summary">Free and open source. See the code, report a problem or suggest an idea.</string>
+    <!-- Project page opened from Settings > About Photon. -->
+    <string name="about_url" translatable="false">https://github.com/Nukvah/Photon</string>
 
     <!-- Developer section (debug builds only) -->
     <string name="developer">Developer</string>

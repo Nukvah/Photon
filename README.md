@@ -28,7 +28,7 @@ email-safe JPEGs, and hands them straight back to share.
 | `scripts/check-permissions.sh` | Fails if an APK asks for any permission (see `PRIVACY.md`) |
 | `scripts/gen-licenses.py` | Collects the licence texts shown under Settings > Open source licenses |
 | `third_party/licenses/` | Standard licence texts for libraries that ship none |
-| `store/` | Icon and artwork sources (`icon.py`, `orb.py`), Play Store icon and feature graphic (`render.js`) |
+| `store/` | Icon and artwork sources (`icon.py`, `orb.py`), Play Store icon and feature graphic (`render.js`), listing text and Play Console answers (`listing.md`) |
 | `PRIVACY.md` | Privacy policy, linked from Settings and the Play listing |
 
 ## Build
@@ -120,6 +120,12 @@ each build (`scripts/gen-licenses.py`), from `Cargo.lock`, the jpegli sources an
 ## Docs
 
 - Development plan, tech spec and UI mockups are kept in the project's Claude docs.
+
+## Support the project
+
+Photon is free and has no ads. If it saves you time, you can buy me a coffee on
+[Ko-fi](https://ko-fi.com/xzpy1). The app itself links only to this page (Settings > About Photon),
+because Google Play does not allow apps to link to outside payment pages.
 
 ## License
 
