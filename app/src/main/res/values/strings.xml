@@ -37,6 +37,7 @@
     <string name="processing_overall">Overall progress</string>
     <string name="processing_waiting">Waiting</string>
     <string name="processing_failed">Skipped</string>
+    <string name="processing_tile">%1$s, %2$s</string>
     <string name="processing_private">Done on your phone. Nothing is uploaded.</string>
     <string name="cancel">Cancel</string>
 
@@ -49,10 +50,23 @@
         <item quantity="other">%d photos ready</item>
     </plurals>
     <string name="done_total">%1$s total, down from %2$s</string>
-    <plurals name="done_skipped">
-        <item quantity="one">%d photo could not be read</item>
-        <item quantity="other">%d photos could not be read</item>
+    <string name="done_nothing">Nothing to send</string>
+    <plurals name="problem_unsupported">
+        <item quantity="one">%d file is not a photo Photon can read</item>
+        <item quantity="other">%d files are not photos Photon can read</item>
     </plurals>
+    <plurals name="problem_unreadable">
+        <item quantity="one">%d photo could not be opened. Try sharing it again.</item>
+        <item quantity="other">%d photos could not be opened. Try sharing them again.</item>
+    </plurals>
+    <plurals name="problem_too_large">
+        <item quantity="one">%d photo is too large for this phone</item>
+        <item quantity="other">%d photos are too large for this phone</item>
+    </plurals>
+    <string name="problem_no_space">The phone is out of storage. Free up some space and try again.</string>
+    <string name="done_too_big_hint">Some inboxes refuse emails over 10 MB.</string>
+    <string name="done_too_big_split">Some inboxes refuse emails over 10 MB. Send these in two emails, or pick fewer photos.</string>
+    <string name="done_switch_small">Switch to Small</string>
     <string name="done_share_one">Share %s</string>
     <string name="share_email">Share via email</string>
     <string name="save_to_folder">Save to folder</string>
@@ -72,5 +86,6 @@
 
     <!-- Developer screen -->
     <string name="developer">Developer</string>
+    <string name="last_batch_timing">Last batch: %1$d photos in %2$.1f s (%3$.2f s each)</string>
     <string name="back">Back</string>
 </resources>

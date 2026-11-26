@@ -3,6 +3,7 @@ package com.nukvah.photon.ui
 import com.nukvah.photon.pipeline.FakePipeline
 import com.nukvah.photon.pipeline.PhotoSize
 import com.nukvah.photon.pipeline.PipelineEvent
+import com.nukvah.photon.pipeline.Problem
 import com.nukvah.photon.pipeline.SamplePhotos
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -37,11 +38,12 @@ class UiStateTest {
     fun doneKeepsInputOrderAndCountsFailures() {
         var s = startProcessing(PhotoSize.SMALL, inputs)
         s = s.apply(PipelineEvent.Finished(2, result(2)), 10)
-        s = s.apply(PipelineEvent.Failed(1, "not a photo"), 20)
+        s = s.apply(PipelineEvent.Failed(1, Problem.UNSUPPORTED), 20)
         s = s.apply(PipelineEvent.Finished(0, result(0)), 30)
         s = s.apply(PipelineEvent.Finished(3, result(3)), 40)
         val done = s.toDone()
         assertEquals(listOf(result(0), result(2), result(3)), done.results)
+        assertEquals(listOf(Problem.UNSUPPORTED), done.problems)
         assertEquals(1, done.failedCount)
         assertEquals(PhotoSize.SMALL, done.size)
     }
@@ -56,7 +58,7 @@ class UiStateTest {
 
     @Test
     fun inboxLimitIsTenMegabytes() {
-        val small = UiState.Done(PhotoSize.STANDARD, inputs, listOf(result(0).copy(sizeBytes = INBOX_SAFE_BYTES)), 0)
+        val small = UiState.Done(PhotoSize.STANDARD, inputs, listOf(result(0).copy(sizeBytes = INBOX_SAFE_BYTES)))
         val big = small.copy(results = listOf(result(0).copy(sizeBytes = INBOX_SAFE_BYTES + 1)))
         assertTrue(small.fitsAnyInbox)
         assertFalse(big.fitsAnyInbox)

@@ -120,7 +120,7 @@ class MainActivity : ComponentActivity() {
                         onChangeEmailApp = { emailPicker = emailApps.installed() to null },
                         onBack = { showSettings = false },
                         modifier = screen,
-                    ) { DeveloperSection() }
+                    ) { DeveloperSection(state.lastFinishedBatch()) }
                 } else {
                     val actions = remember { Actions { showSettings = true } }
                     CompositionLocalProvider(LocalThumbnails provides thumbnails) {
@@ -217,7 +217,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun DeveloperSection() {
+private fun DeveloperSection(lastBatch: UiState.Done?) {
     val status = remember { loadCore() }
     val scope = rememberCoroutineScope()
     var running by remember { mutableStateOf(false) }
@@ -228,6 +228,14 @@ private fun DeveloperSection() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(stringResource(R.string.developer), style = MaterialTheme.typography.titleMedium)
+        if (lastBatch != null && lastBatch.elapsedMillis > 0) {
+            val count = lastBatch.results.size + lastBatch.failedCount
+            val seconds = lastBatch.elapsedMillis / 1000.0
+            Text(
+                stringResource(R.string.last_batch_timing, count, seconds, seconds / count.coerceAtLeast(1)),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
         Text(status.summary(), style = MaterialTheme.typography.bodyLarge)
         if (status is CoreStatus.Loaded) {
             Text(status.ping, style = MaterialTheme.typography.bodyMedium)
@@ -248,6 +256,12 @@ private fun DeveloperSection() {
             }
         }
     }
+}
+
+private fun UiState.lastFinishedBatch(): UiState.Done? = when (this) {
+    is UiState.Done -> this
+    is UiState.Idle -> lastBatch
+    is UiState.Processing -> null
 }
 
 private fun loadCore(): CoreStatus = try {

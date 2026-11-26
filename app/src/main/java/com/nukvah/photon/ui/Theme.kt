@@ -21,7 +21,8 @@ object PhotonColors {
     val InkSecondary = Color(0xFF3A3E47)
     val Muted = Color(0xFF555A64)
     val Faint = Color(0xFF6B6F78)
-    val Border = Color(0xFFC9C6BC)
+    // 3:1 against both backgrounds, so outlined buttons and chips stay visible (WCAG 1.4.11).
+    val Border = Color(0xFF8F8B82)
     val Track = Color(0xFFE6E4DD)
     val Divider = Color(0xFFEEECE6)
     val Accent = Color(0xFF2E46E6)

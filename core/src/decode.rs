@@ -50,6 +50,15 @@ pub struct DecodeInfo {
 }
 
 pub fn decode(bytes: &[u8]) -> Result<(RgbImage, DecodeInfo), DecodeError> {
+    let (image, info, orientation) = decode_unoriented(bytes)?;
+    Ok((orient(image, orientation), info))
+}
+
+/// Like [decode] but leaves the EXIF orientation to the caller, so it can be applied
+/// after downscaling: rotating a 50 MP photo would need a second 150 MB buffer.
+pub fn decode_unoriented(
+    bytes: &[u8],
+) -> Result<(RgbImage, DecodeInfo, image::metadata::Orientation), DecodeError> {
     let reader = ImageReader::new(Cursor::new(bytes))
         .with_guessed_format()
         .map_err(|e| DecodeError(e.to_string()))?;
@@ -76,24 +85,39 @@ pub fn decode(bytes: &[u8]) -> Result<(RgbImage, DecodeInfo), DecodeError> {
         Some(profile) => convert_to_srgb(&mut rgb, &profile),
         None => false,
     };
-    let mut upright = DynamicImage::ImageRgb8(rgb);
-    upright.apply_orientation(orientation);
-    let upright = upright.into_rgb8();
-
     let info = DecodeInfo {
         format,
         exif_orientation: orientation_number(orientation),
         icc_converted,
     };
-    let (width, height) = upright.dimensions();
+    let (width, height) = rgb.dimensions();
     Ok((
         RgbImage {
             width,
             height,
-            pixels: upright.into_raw(),
+            pixels: rgb.into_raw(),
         },
         info,
+        orientation,
     ))
+}
+
+/// Bakes an EXIF orientation into the pixels.
+pub fn orient(image: RgbImage, orientation: image::metadata::Orientation) -> RgbImage {
+    if orientation == image::metadata::Orientation::NoTransforms {
+        return image;
+    }
+    let buffer = image::RgbImage::from_raw(image.width, image.height, image.pixels)
+        .expect("buffer matches size");
+    let mut dynamic = DynamicImage::ImageRgb8(buffer);
+    dynamic.apply_orientation(orientation);
+    let upright = dynamic.into_rgb8();
+    let (width, height) = upright.dimensions();
+    RgbImage {
+        width,
+        height,
+        pixels: upright.into_raw(),
+    }
 }
 
 /// Pixels from another decoder: RGBA (not premultiplied), flattened onto white like files.
@@ -159,11 +183,18 @@ fn convert_to_srgb(rgb: &mut image::RgbImage, icc: &[u8]) -> bool {
     let Ok(transform) = src.create_transform_8bit(Layout::Rgb, &dst, Layout::Rgb, options) else {
         return false;
     };
-    let mut out = vec![0u8; rgb.as_raw().len()];
-    if transform.transform(rgb.as_raw(), &mut out).is_err() {
-        return false;
+    // A band of rows at a time, so a large photo needs no second full-size buffer.
+    // Pixels are independent, so the result is the same as one big call.
+    let band = (rgb.width() as usize * 3 * 64).max(3);
+    let mut scratch = vec![0u8; band];
+    for chunk in rgb.chunks_mut(band) {
+        let out = &mut scratch[..chunk.len()];
+        if transform.transform(chunk, out).is_err() {
+            // Only possible on the first band (bad sizes), before anything changed.
+            return false;
+        }
+        chunk.copy_from_slice(out);
     }
-    rgb.copy_from_slice(&out);
     true
 }
 

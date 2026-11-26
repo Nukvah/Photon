@@ -4,6 +4,7 @@ import com.nukvah.photon.pipeline.FakePipeline
 import com.nukvah.photon.pipeline.PhotoPipeline
 import com.nukvah.photon.pipeline.PhotoSize
 import com.nukvah.photon.pipeline.PipelineEvent
+import com.nukvah.photon.pipeline.Problem
 import com.nukvah.photon.pipeline.SamplePhotos
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -60,6 +61,8 @@ class PhotonViewModelTest {
         advanceUntilIdle()
         val done = vm.state.value as UiState.Done
         assertEquals(SamplePhotos.batch.size, done.results.size)
+        // 8 photos × 4 steps × 100 ms, all on the test clock.
+        assertEquals(3_200L, done.elapsedMillis)
         assertEquals(PhotoSize.SMALL, done.size)
 
         vm.close()
@@ -133,7 +136,7 @@ class PhotonViewModelTest {
 
         // After a restart the shared photos can no longer be read.
         val unreadable = PhotoPipeline { inputs, _ ->
-            flowOf(*inputs.indices.map { PipelineEvent.Failed(it, "permission gone") }.toTypedArray())
+            flowOf(*inputs.indices.map { PipelineEvent.Failed(it, Problem.UNREADABLE) }.toTypedArray())
         }
         val vm = newViewModel(store, unreadable)
         vm.reopenLastBatch()

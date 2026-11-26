@@ -2,6 +2,7 @@ package com.nukvah.photon.ui
 
 import com.nukvah.photon.pipeline.PhotoInput
 import com.nukvah.photon.pipeline.PhotoSize
+import com.nukvah.photon.pipeline.Problem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -13,13 +14,15 @@ class BatchCodecTest {
             d.copy(
                 inputs = d.inputs + PhotoInput("content://media/1", "Léto\t2024.heic", 0),
                 results = d.results.mapIndexed { i, r -> r.copy(file = "/cache/batches/batch-1/$i.jpg") },
-                failedCount = 1,
+                problems = listOf(Problem.UNSUPPORTED, Problem.NO_SPACE),
+                elapsedMillis = 2_345,
             )
         }
         val back = BatchCodec.decode(BatchCodec.encode(done))!!
         assertEquals(done.results, back.results)
         assertEquals(PhotoSize.SHARP, back.size)
-        assertEquals(1, back.failedCount)
+        assertEquals(listOf(Problem.UNSUPPORTED, Problem.NO_SPACE), back.problems)
+        assertEquals(2_345L, back.elapsedMillis)
         // Tabs inside a name would split the record, so they become spaces.
         assertEquals("Léto 2024.heic", back.inputs.last().name)
     }

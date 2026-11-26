@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -101,7 +102,7 @@ fun PillButton(
 fun RoundIconButton(icon: ImageVector, label: String, onClick: () -> Unit, tint: Color = PhotonColors.Ink, iconSize: Dp = 22.dp) {
     Box(
         Modifier
-            .size(44.dp)
+            .size(48.dp)
             .clip(CircleShape)
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = label },
@@ -133,7 +134,9 @@ fun SizeChip(text: String, selected: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(50)
     Box(
         Modifier
-            .height(36.dp)
+            // Looks 36 dp tall, but takes taps across 48 dp.
+            .minimumInteractiveComponentSize()
+            .heightIn(min = 36.dp)
             .clip(shape)
             .background(if (selected) PhotonColors.AccentSoft else Color.Transparent)
             .border(1.5.dp, if (selected) PhotonColors.Accent else PhotonColors.Border, shape)
