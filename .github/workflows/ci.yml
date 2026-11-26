@@ -99,6 +99,8 @@ jobs:
         run: |
           export READELF="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
           scripts/check-16kb.sh app/build/outputs/apk/debug/app-debug.apk
+      - name: Check permissions (privacy policy)
+        run: scripts/check-permissions.sh app/build/outputs/apk/debug/app-debug.apk
       - name: Native library sizes
         run: unzip -lv app/build/outputs/apk/debug/app-debug.apk 'lib/*' | awk 'NR<=3 || /lib\//'
       - name: Upload debug APK

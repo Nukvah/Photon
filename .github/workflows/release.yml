@@ -1,0 +1,81 @@
+name: Release
+
+# Builds the signed App Bundle for Google Play. Runs for a version tag (v1.2.3) or by hand.
+# Needs four repository secrets: PHOTON_KEYSTORE_BASE64 (the upload keystore, base64),
+# PHOTON_KEYSTORE_PASSWORD, PHOTON_KEY_ALIAS and PHOTON_KEY_PASSWORD.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    name: Signed App Bundle
+    runs-on: ubuntu-latest
+    env:
+      NDK_VERSION: 28.2.13676358
+      # Each run gets a higher version code, as Google Play requires.
+      PHOTON_VERSION_CODE: ${{ github.run_number }}
+      PHOTON_VERSION_NAME: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('0.1.0-dev.{0}', github.run_number) }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Version name without the leading v
+        run: echo "PHOTON_VERSION_NAME=${PHOTON_VERSION_NAME#v}" >> "$GITHUB_ENV"
+      - name: Fetch jpegli sources
+        run: scripts/fetch-jpegli.sh
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Install NDK
+        run: |
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "ndk;${NDK_VERSION}" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, x86_64-linux-android
+      - name: Install cargo-ndk
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Write the upload keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PHOTON_KEYSTORE_BASE64 }}
+        run: |
+          if [[ -z "$KEYSTORE_BASE64" ]]; then
+            echo "::error::The PHOTON_KEYSTORE_BASE64 secret is not set. See the Release section of README.md."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "PHOTON_KEYSTORE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+      - name: Build App Bundle and APK
+        env:
+          PHOTON_KEYSTORE_PASSWORD: ${{ secrets.PHOTON_KEYSTORE_PASSWORD }}
+          PHOTON_KEY_ALIAS: ${{ secrets.PHOTON_KEY_ALIAS }}
+          PHOTON_KEY_PASSWORD: ${{ secrets.PHOTON_KEY_PASSWORD }}
+        run: ./gradlew --stacktrace bundleRelease assembleRelease
+      - name: Check 16 KB page alignment
+        run: |
+          export READELF="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          scripts/check-16kb.sh app/build/outputs/apk/release/app-release.apk
+      - name: Check permissions (privacy policy)
+        run: scripts/check-permissions.sh app/build/outputs/apk/release/app-release.apk
+      - name: Check the bundle is signed
+        run: jarsigner -verify app/build/outputs/bundle/release/app-release.aab | grep -q "jar verified"
+      - name: Remove the keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: photon-${{ env.PHOTON_VERSION_NAME }}-aab
+          path: app/build/outputs/bundle/release/app-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: photon-${{ env.PHOTON_VERSION_NAME }}-apk
+          path: app/build/outputs/apk/release/app-release.apk

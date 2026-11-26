@@ -25,10 +25,16 @@ email-safe JPEGs, and hands them straight back to share.
 | `scripts/build-rust.sh` | Builds the core for each Android ABI and generates bindings |
 | `scripts/fetch-jpegli.sh` | Fetches the jpegli submodule and the parts of it the build needs |
 | `scripts/check-16kb.sh` | Verifies native libraries in an APK support 16 KB pages |
+| `scripts/check-permissions.sh` | Fails if an APK asks for any permission (see `PRIVACY.md`) |
+| `scripts/gen-licenses.py` | Collects the licence texts shown under Settings > Open source licenses |
+| `third_party/licenses/` | Standard licence texts for libraries that ship none |
+| `store/` | Icon and artwork sources (`icon.py`, `orb.py`), Play Store icon and feature graphic (`render.js`) |
+| `PRIVACY.md` | Privacy policy, linked from Settings and the Play listing |
 
 ## Build
 
-Needs: JDK 17, Android SDK with NDK `28.2.13676358`, Rust (stable), `cargo-ndk`, CMake and a C++ compiler.
+Needs: JDK 17, Android SDK with NDK `28.2.13676358`, Rust (stable), `cargo-ndk`, CMake, a C++ compiler
+and Python 3.11+ (for the licence notices).
 
 ```sh
 scripts/fetch-jpegli.sh        # once after cloning
@@ -79,7 +85,37 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push:
 - Rust: format, clippy, tests
 - License check with cargo-deny
 - Android: builds the debug APK for arm64-v8a and x86_64, runs unit tests, checks 16 KB
-  alignment, and uploads the APK as a build artifact you can install on a phone.
+  alignment and permissions, and uploads the APK as a build artifact you can install on a phone.
+  The screenshot tests (including the Play Store set in `app/src/test/screenshots/store/`) are uploaded too.
+
+## Release
+
+`.github/workflows/release.yml` builds the signed App Bundle for Google Play. It runs when a
+tag like `v1.0.0` is pushed, or by hand from the Actions tab. The version code is the
+workflow's run number; the version name comes from the tag.
+
+It signs with the upload key, from four repository secrets (Settings > Secrets and
+variables > Actions):
+
+| Secret | Value |
+| --- | --- |
+| `PHOTON_KEYSTORE_BASE64` | The upload keystore, base64 encoded (`base64 -w0 upload.jks`) |
+| `PHOTON_KEYSTORE_PASSWORD` | Keystore password |
+| `PHOTON_KEY_ALIAS` | Key alias |
+| `PHOTON_KEY_PASSWORD` | Key password |
+
+Create the keystore once, keep it out of the repository, and back it up:
+
+```sh
+keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Google Play App Signing holds the real app signing key, so a lost upload key can be reset.
+Without the secrets, `./gradlew bundleRelease` still builds an unsigned bundle locally.
+
+Settings > Open source licenses lists every bundled library. Gradle generates the list on
+each build (`scripts/gen-licenses.py`), from `Cargo.lock`, the jpegli sources and
+`gradle/libs.versions.toml`, so a new dependency shows up without any manual step.
 
 ## Docs
 
