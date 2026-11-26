@@ -19,6 +19,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -98,15 +100,16 @@ fun DoneScreen(
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             PillButton(stringResource(R.string.share_email), onShareEmail, icon = PhotonIcons.Mail, height = 60.dp, modifier = Modifier.fillMaxWidth())
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PillButton(
-                    stringResource(R.string.save_to_folder), onSaveToFolder, icon = PhotonIcons.Folder, filled = false,
-                    height = 52.dp, textStyle = PhotonType.ButtonSmall, modifier = Modifier.weight(1f),
-                )
-                PillButton(
-                    stringResource(R.string.other_apps), onOtherApps, icon = PhotonIcons.OtherApps, filled = false,
-                    height = 52.dp, textStyle = PhotonType.ButtonSmall, modifier = Modifier.weight(1f),
-                )
+            // With large text (the default on many phones) two buttons side by side no longer fit.
+            val stacked = LocalDensity.current.fontScale > 1.15f
+            if (stacked) {
+                SecondaryButton(stringResource(R.string.save_to_folder), onSaveToFolder, PhotonIcons.Folder, Modifier.fillMaxWidth())
+                SecondaryButton(stringResource(R.string.other_apps), onOtherApps, PhotonIcons.OtherApps, Modifier.fillMaxWidth())
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SecondaryButton(stringResource(R.string.save_to_folder), onSaveToFolder, PhotonIcons.Folder, Modifier.weight(1f))
+                    SecondaryButton(stringResource(R.string.other_apps), onOtherApps, PhotonIcons.OtherApps, Modifier.weight(1f))
+                }
             }
         }
     }
@@ -130,4 +133,9 @@ private fun ResultRow(index: Int, result: PhotoResult, onShare: () -> Unit) {
         }
         RoundIconButton(PhotonIcons.Share, stringResource(R.string.done_share_one, result.name), onShare, tint = PhotonColors.InkSecondary, iconSize = 20.dp)
     }
+}
+
+@Composable
+private fun SecondaryButton(label: String, onClick: () -> Unit, icon: ImageVector, modifier: Modifier) {
+    PillButton(label, onClick, icon = icon, filled = false, height = 52.dp, textStyle = PhotonType.ButtonSmall, modifier = modifier)
 }

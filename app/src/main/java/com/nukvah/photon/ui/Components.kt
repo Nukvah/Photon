@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,6 +37,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,7 +75,7 @@ fun PillButton(
 ) {
     val shape = RoundedCornerShape(50)
     val base = modifier
-        .height(height)
+        .heightIn(min = height)
         .clip(shape)
         .then(
             if (filled) {
@@ -83,13 +85,14 @@ fun PillButton(
             },
         )
         .clickable(role = Role.Button, onClick = onClick)
+        .padding(horizontal = 16.dp, vertical = 6.dp)
     val color = if (filled) Color.White else PhotonColors.Ink
     Row(base, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
         if (icon != null) {
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(if (filled) 22.dp else 18.dp))
             Spacer(Modifier.width(if (filled) 10.dp else 8.dp))
         }
-        Text(text, style = textStyle, color = color)
+        Text(text, style = textStyle, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

@@ -48,6 +48,13 @@ class ScreenshotTest {
         DoneScreen(big, {}, {}, {}, {}, {}, {})
     }
 
+    /** Many phones run with larger text; the bottom buttons stack instead of wrapping. */
+    @Test
+    @Config(fontScale = 1.3f)
+    fun doneLargeText() = shot("3-done-large-text") {
+        DoneScreen(doneBatch(), {}, {}, {}, {}, {}, {})
+    }
+
     @Test
     fun emailAppPicker() = shot("4-email-app") {
         val apps = listOf(AppChoice("a", "Email"), AppChoice("b", "Larkmail"), AppChoice("c", "Postfly"))
