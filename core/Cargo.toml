@@ -1,0 +1,27 @@
+[package]
+name = "photon-core"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Photon image pipeline: decode, resize and encode email-safe JPEGs."
+
+[lib]
+name = "photon_core"
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["cli"]
+
+[features]
+# Only needed to run the Kotlin bindings generator; never part of the app library.
+cli = ["uniffi/cli"]
+
+[dependencies]
+uniffi = "0.33"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

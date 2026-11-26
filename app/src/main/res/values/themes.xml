@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.Photon" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
