@@ -1,3 +1,65 @@
 <resources>
     <string name="app_name">Photon</string>
+
+    <!-- Sizes -->
+    <string name="size_label">Size</string>
+    <string name="size_small">Small</string>
+    <string name="size_standard">Standard</string>
+    <string name="size_sharp">Sharp</string>
+    <string name="size_hint_small">About 80 KB per photo. Best for 20 or more photos.</string>
+    <string name="size_hint_standard">About 150 KB per photo. Sharp full screen on a laptop.</string>
+    <string name="size_hint_sharp">About 250 KB per photo. For photos people may print or zoom.</string>
+    <string name="size_each">about %1$d KB each</string>
+
+    <!-- Idle -->
+    <string name="settings">Settings</string>
+    <string name="idle_title">Share photos to Photon</string>
+    <string name="idle_body">In Gallery, Photos or Files, tap Share and pick Photon. Shrinking starts right away.</string>
+    <string name="idle_step_share">Share</string>
+    <string name="idle_step_photon">Photon</string>
+    <string name="idle_step_send">Send</string>
+    <string name="select_photos">Select photos</string>
+    <plurals name="last_batch">
+        <item quantity="one">Last batch: %1$d photo, %2$s</item>
+        <item quantity="other">Last batch: %1$d photos, %2$s</item>
+    </plurals>
+    <string name="share_again">Share again</string>
+
+    <!-- Processing -->
+    <plurals name="processing_title">
+        <item quantity="one">Shrinking %d photo</item>
+        <item quantity="other">Shrinking %d photos</item>
+    </plurals>
+    <string name="processing_of">of %d</string>
+    <string name="processing_seconds_left">about %d s left</string>
+    <string name="processing_in">%s in</string>
+    <string name="processing_out">%s out so far</string>
+    <string name="processing_overall">Overall progress</string>
+    <string name="processing_waiting">Waiting</string>
+    <string name="processing_failed">Skipped</string>
+    <string name="processing_private">Done on your phone. Nothing is uploaded.</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Done -->
+    <string name="done_close">Start a new batch</string>
+    <string name="done_fits">Fits any inbox</string>
+    <string name="done_too_big">Over 10 MB</string>
+    <plurals name="done_title">
+        <item quantity="one">%d photo ready</item>
+        <item quantity="other">%d photos ready</item>
+    </plurals>
+    <string name="done_total">%1$s total, down from %2$s</string>
+    <plurals name="done_skipped">
+        <item quantity="one">%d photo could not be read</item>
+        <item quantity="other">%d photos could not be read</item>
+    </plurals>
+    <string name="done_share_one">Share %s</string>
+    <string name="share_email">Share via email</string>
+    <string name="save_to_folder">Save to folder</string>
+    <string name="other_apps">Other apps</string>
+    <string name="coming_soon">Sharing arrives in the next update</string>
+
+    <!-- Developer screen -->
+    <string name="developer">Developer</string>
+    <string name="back">Back</string>
 </resources>
