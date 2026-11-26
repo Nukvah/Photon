@@ -28,7 +28,7 @@ email-safe JPEGs, and hands them straight back to share.
 | `scripts/check-permissions.sh` | Fails if an APK asks for any permission (see `PRIVACY.md`) |
 | `scripts/gen-licenses.py` | Collects the licence texts shown under Settings > Open source licenses |
 | `third_party/licenses/` | Standard licence texts for libraries that ship none |
-| `store/` | Icon and artwork sources (`icon.py`, `orb.py`), Play Store icon and feature graphic (`render.js`), listing text and Play Console answers (`listing.md`) |
+| `store/` | Icon and artwork sources (`icon.py`, `orb.py`), Play Store icon and feature graphic (`render.js`, from `icon.svg`), listing text and Play Console answers (`listing.md`) |
 | `PRIVACY.md` | Privacy policy, linked from Settings and the Play listing |
 
 ## Build
