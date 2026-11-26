@@ -20,6 +20,10 @@ cli = ["uniffi/cli"]
 
 [dependencies]
 uniffi = "0.33"
+photon-jpegli-sys = { path = "jpegli-sys" }
+
+[workspace]
+members = [".", "jpegli-sys"]
 
 [profile.release]
 opt-level = 3

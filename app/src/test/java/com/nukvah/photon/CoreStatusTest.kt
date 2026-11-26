@@ -15,3 +15,11 @@ class CoreStatusTest {
         assertEquals("photon-core failed to load: missing .so", CoreStatus.Failed("missing .so").summary())
     }
 }
+
+class BenchmarkFormatTest {
+    @Test
+    fun formatsOneLine() {
+        val line = formatBenchmark("Standard", 1224u, 816u, 1.2f, 102400uL, 8.25, "abc123")
+        assertEquals("Standard 1224x816 d=1.2: 100.0 KB in 8.3 ms [abc123]", line)
+    }
+}

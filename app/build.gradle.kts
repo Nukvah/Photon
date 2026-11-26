@@ -58,6 +58,8 @@ val buildRust by tasks.registering(Exec::class) {
     val jniOut = layout.buildDirectory.dir("rust/jniLibs").get().asFile
     val kotlinOut = layout.buildDirectory.dir("rust/kotlin").get().asFile
     inputs.dir(rootProject.file("core/src"))
+    inputs.dir(rootProject.file("core/jpegli-sys/shim"))
+    inputs.file(rootProject.file("core/jpegli-sys/build.rs"))
     inputs.file(rootProject.file("core/Cargo.toml"))
     inputs.file(rootProject.file("core/uniffi.toml"))
     inputs.file(script)
