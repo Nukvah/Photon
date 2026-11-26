@@ -10,13 +10,14 @@ uniffi::setup_scaffolding!();
 /// Errors returned to Kotlin.
 #[derive(Debug, uniffi::Error)]
 pub enum PhotonError {
-    Encode { message: String },
+    /// Field is `reason`, not `message`: Kotlin exceptions already have `message`.
+    Encode { reason: String },
 }
 
 impl std::fmt::Display for PhotonError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PhotonError::Encode { message } => write!(f, "{message}"),
+            PhotonError::Encode { reason } => write!(f, "{reason}"),
         }
     }
 }
@@ -26,7 +27,7 @@ impl std::error::Error for PhotonError {}
 impl From<encode::EncodeError> for PhotonError {
     fn from(e: encode::EncodeError) -> Self {
         PhotonError::Encode {
-            message: e.to_string(),
+            reason: e.to_string(),
         }
     }
 }
