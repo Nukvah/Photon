@@ -112,8 +112,6 @@ keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 4
 
 Google Play App Signing holds the real app signing key, so a lost upload key can be reset.
 Without the secrets, `./gradlew bundleRelease` still builds an unsigned bundle locally.
-The release workflow sets `PHOTON_PLAY_BUILD=true`, which leaves the Donate row out of the
-Play build (Google Play does not allow links to outside payment pages).
 
 Settings > Open source licenses lists every bundled library. Gradle generates the list on
 each build (`scripts/gen-licenses.py`), from `Cargo.lock`, the jpegli sources and
@@ -122,6 +120,12 @@ each build (`scripts/gen-licenses.py`), from `Cargo.lock`, the jpegli sources an
 ## Docs
 
 - Development plan, tech spec and UI mockups are kept in the project's Claude docs.
+
+## Support the project
+
+Photon is free and has no ads. If it saves you time, you can buy me a coffee on
+[Ko-fi](https://ko-fi.com/xzpy1). The app itself links only to this page (Settings > About Photon),
+because Google Play does not allow apps to link to outside payment pages.
 
 ## License
 

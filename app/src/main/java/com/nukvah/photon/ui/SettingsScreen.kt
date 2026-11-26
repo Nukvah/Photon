@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.nukvah.photon.R
 
 /**
- * Settings: the email app, the privacy policy and licences, a donate link when `onDonate` is set,
+ * Settings: the email app, the privacy policy and licences, an About row linking to the project page when `onAbout` is set,
  * then developer tools passed in as `developer` (debug builds only).
  */
 @Composable
@@ -34,7 +34,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onPrivacyPolicy: () -> Unit = {},
     onLicenses: () -> Unit = {},
-    onDonate: (() -> Unit)? = null,
+    onAbout: (() -> Unit)? = null,
     version: String = "",
     developer: @Composable () -> Unit = {},
 ) {
@@ -48,8 +48,8 @@ fun SettingsScreen(
         SettingRow(stringResource(R.string.email_app_setting), emailApp ?: stringResource(R.string.email_app_not_chosen), stringResource(R.string.change), onChangeEmailApp)
         SettingRow(stringResource(R.string.privacy_policy), stringResource(R.string.privacy_summary), null, onPrivacyPolicy)
         SettingRow(stringResource(R.string.licenses), null, null, onLicenses)
-        if (onDonate != null) {
-            SettingRow(stringResource(R.string.donate), stringResource(R.string.donate_summary), null, onDonate)
+        if (onAbout != null) {
+            SettingRow(stringResource(R.string.about), stringResource(R.string.about_summary), null, onAbout)
         }
         if (version.isNotEmpty()) {
             Text(stringResource(R.string.version, version), style = PhotonType.Caption, color = PhotonColors.Faint)

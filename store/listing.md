@@ -72,7 +72,8 @@ Text and answers for the Play Console, ready to paste. Images are in this folder
 
 ## Policy notes
 
-- The Play build has no Donate row (Play does not allow links to outside payment pages),
-  so do not mention donations or Ko-fi in the listing either.
+- The app has no Donate link (Play does not allow links to outside payment pages). Settings >
+  About Photon opens the GitHub page, where the Ko-fi link lives. Do not mention donations or
+  Ko-fi in the listing either.
 - With no paid features or in-app payments, the account can be declared a **non-trader**
   under the EU Digital Services Act.
