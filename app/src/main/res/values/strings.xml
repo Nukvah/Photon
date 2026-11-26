@@ -91,8 +91,12 @@
     <string name="licenses_intro">Photon is built with these libraries. Tap one to read its license.</string>
     <string name="version">Version %s</string>
     <string name="privacy_policy_url" translatable="false">https://github.com/Nukvah/Photon/blob/main/PRIVACY.md</string>
+    <string name="donate">Donate</string>
+    <string name="donate_summary">Photon is free. If it helps you, you can support its development.</string>
+    <!-- Placeholder: replace with the real donation page. Leave empty to hide the Donate row. -->
+    <string name="donate_url" translatable="false">https://example.com/donate</string>
 
-    <!-- Developer screen -->
+    <!-- Developer section (debug builds only) -->
     <string name="developer">Developer</string>
     <string name="last_batch_timing">Last batch: %1$d photos in %2$.1f s (%3$.2f s each)</string>
     <string name="back">Back</string>
